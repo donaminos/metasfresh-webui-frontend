@@ -336,12 +336,7 @@ export function getTab(tabId, windowType, docId) {
         dispatch(getData('window', windowType, docId, tabId))
             .then(res => {
                 if(res.data){
-                    let tab = {};
-                    res.data.map(row => {
-                        row.fields = parseToDisplay(row.fields);
-                        tab[row.rowId] = row;
-                    });
-                    return tab;
+                    return res.data;
                 }
             })
 }
