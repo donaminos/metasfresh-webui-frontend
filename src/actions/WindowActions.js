@@ -334,11 +334,10 @@ function initTabs(layout, windowType, docId, isModal) {
 export function getTab(tabId, windowType, docId) {
     return dispatch =>
         dispatch(getData('window', windowType, docId, tabId))
-            .then(res => {
-                if(res.data){
-                    return res.data;
-                }
-            })
+            .then(res =>
+                res.data && res.data.map(row => Object.assign({}, row,
+                    {fields: parseToDisplay(row.fields)}
+                )))
 }
 
 export function initWindow(windowType, docId, tabId, rowId = null, isAdvanced) {
