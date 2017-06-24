@@ -91,7 +91,7 @@ class MenuOverlayItem extends Component {
     handleGroupUp() {
         const previousGroup =
             document.activeElement.parentElement.previousSibling;
-        const headerLink = document.getElementsByClassName('js-menu-header')[0];
+        const browseItem = document.getElementsByClassName('js-browse-item')[0];
 
         if(previousGroup && previousGroup.classList.contains('js-menu-item')){
             previousGroup.focus();
@@ -100,7 +100,7 @@ class MenuOverlayItem extends Component {
                 const listChildren = previousGroup.childNodes;
                 const lastChildren = listChildren[listChildren.length - 1];
                 if(listChildren.length == 1){
-                    listChildren[0].focus();
+                    listChildren[0].focus && listChildren[0].focus();
                 }else{
                     if(lastChildren.classList.contains('js-menu-item')) {
                         lastChildren.focus();
@@ -111,7 +111,7 @@ class MenuOverlayItem extends Component {
 
                 }
             } else {
-                headerLink && headerLink.focus()
+                browseItem && browseItem.focus()
             }
         }
 

@@ -530,12 +530,7 @@ body {
 
 .column-wrapper {
     column-count: 2;
-}
-
-@media (max-width: $breakpoint) {
-    .column-wrapper {
-        column-count: 1;
-    }
+    column-fill: auto;
 }
 
 .font-weight-semibold {

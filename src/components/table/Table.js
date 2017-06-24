@@ -122,7 +122,9 @@ class Table extends Component {
 
             this.setState({
                 rows: rowsData,
-                pendingInit: !rowsData
+                pendingInit: !rowsData,
+                collapsedParentsRows: [],
+                collapsedRows: []
             }, () => {
                 const {rows} = this.state;
 

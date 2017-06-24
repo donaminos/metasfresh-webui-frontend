@@ -21,7 +21,7 @@ class RawList extends Component {
         (this.dropdown && autofocus) && this.dropdown.focus();
     }
 
-    componentDidUpdate = prevProps => {
+    componentDidUpdate = (prevProps, prevState) => {
         const {
             list, mandatory, defaultValue, autofocus, blur, property,
             initialFocus, selected
@@ -33,6 +33,9 @@ class RawList extends Component {
 
         if(this.dropdown && autofocus) {
             this.dropdown.focus();
+            if (prevState.selected !== this.state.selected) {
+                 list.length === 1 && this.handleSelect(list[0]);
+            }
         }
 
         if(prevProps.defaultValue != defaultValue && property){
@@ -315,9 +318,9 @@ class RawList extends Component {
         }
 
         const optionKeys = Object.keys(option);
-        const selectedKeys = Object.keys(selected);
+        const selectedKeys = selected && Object.keys(selected);
         const firstOption = option[optionKeys[0]];
-        const firstSelected = selected[selectedKeys[0]];
+        const firstSelected = selected && selected[selectedKeys[0]];
 
         // objects, and first elements are not
         if (
@@ -389,8 +392,14 @@ class RawList extends Component {
             isOpen
         } = this.state;
 
-        const value = defaultValue &&
+        let value = '';
+
+        if(typeof defaultValue === 'string') {
+            value = defaultValue;
+        } else {
+            value = defaultValue &&
                         defaultValue[Object.keys(defaultValue)[0]];
+        }
 
         return (
             <div
