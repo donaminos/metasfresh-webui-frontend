@@ -5,6 +5,7 @@ import MenuOverlayContainer from '../components/header/MenuOverlayContainer';
 import {push} from 'react-router-redux';
 import DebounceInput from 'react-debounce-input';
 import Container from '../components/Container';
+import counterpart from 'counterpart';
 
 import {
     rootRequest,
@@ -127,9 +128,11 @@ class NavigationTree extends Component {
         }
     }
 
-    handleRedirect = (elementId) => {
+    handleRedirect = (elementId, isNew, type) => {
         const {dispatch} = this.props;
-        dispatch(push('/window/' + elementId));
+        dispatch(push(
+            '/' + (type ? type : 'window') + '/' + elementId
+        ));
     }
 
     handleNewRedirect = (elementId) => {
@@ -166,7 +169,9 @@ class NavigationTree extends Component {
                             debounceTimeout={250}
                             type="text" id="search-input"
                             className="input-field"
-                            placeholder="Type phrase here"
+                            placeholder={counterpart.translate(
+                                'window.type.placeholder'
+                            )}
                             onChange={e => this.handleQuery(e) }
                             onKeyDown={(e) =>
                                 this.handleKeyDown(e)}

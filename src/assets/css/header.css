@@ -204,6 +204,10 @@
     color: inherit;
 }
 
+.subheader-item i {
+    margin-right: 5px;
+}
+
 .subheader-caption {
     position: relative;
     width: 100%;
@@ -251,6 +255,9 @@
 }
 
 .subheader-header {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
     padding: .75rem 1.25rem;
     color: $brand-color-primary;
     font-size: 1.1rem;
@@ -358,6 +365,14 @@
 }
 
 .sitemap .menu-overlay-node-container {
+    width: 100%;
+}
+
+.menu-overlay-node-container.menu-suboverlay {
+    width: 100%;
+}
+
+.menu-suboverlay .menu-overlay-node-container {
     width: 100%;
 }
 
@@ -490,6 +505,10 @@
 .menu-overlay-expanded-link {
     color: $brand-link-color;
     width: auto;
+}
+
+.menu-overlay-header {
+    border-bottom: 1px solid transparent;
 }
 
 .menu-overlay-header:focus {

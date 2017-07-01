@@ -17,14 +17,13 @@ class RawList extends Component {
 
     componentDidMount = () => {
         const {autofocus} = this.props;
-
         (this.dropdown && autofocus) && this.dropdown.focus();
     }
 
     componentDidUpdate = (prevProps, prevState) => {
         const {
             list, mandatory, defaultValue, autofocus, blur, property,
-            initialFocus, selected
+            initialFocus, selected, doNotOpenOnFocus
         } = this.props;
 
         if(prevProps.blur != blur){
@@ -34,7 +33,10 @@ class RawList extends Component {
         if(this.dropdown && autofocus) {
             this.dropdown.focus();
             if (prevState.selected !== this.state.selected) {
-                 list.length === 1 && this.handleSelect(list[0]);
+                list.length === 1 && this.handleSelect(list[0]);
+                !doNotOpenOnFocus && list.length > 1 && this.setState({
+                    isOpen: true
+                })
             }
         }
 
@@ -177,11 +179,13 @@ class RawList extends Component {
 
     handleFocus = (e) => {
         e.preventDefault();
-        const {onFocus, doNotOpenOnFocus} = this.props;
+        const {
+            onFocus, doNotOpenOnFocus, autofocus
+        } = this.props;
 
         onFocus && onFocus();
 
-        !doNotOpenOnFocus && this.setState({
+        !doNotOpenOnFocus && !autofocus && this.setState({
             isOpen: true
         })
     }
@@ -268,7 +272,7 @@ class RawList extends Component {
 
     handleKeyDown = (e) => {
         const {selected, isOpen} = this.state;
-        const {onSelect} = this.props;
+        const {onSelect, list} = this.props;
 
         if(e.keyCode > 47 && e.keyCode < 123){
             this.navigateToAlphanumeric(e.key);
@@ -292,11 +296,13 @@ class RawList extends Component {
                     } else {
                         onSelect(null);
                     }
-
                     break;
                 case 'Escape':
                     e.preventDefault();
                     this.handleBlur();
+                    break;
+                case 'Tab':
+                    list.length === 0 && onSelect(null);
                     break;
             }
         }

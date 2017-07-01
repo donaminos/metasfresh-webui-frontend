@@ -57,6 +57,14 @@ export function patchRequest(
 
     if (docId === 'NEW') {
         payload = [];
+    } else if (Array.isArray(property) && Array.isArray(value)){
+        property.map((item, index) => {
+            payload.push({
+                'op': 'replace',
+                'path': item,
+                'value': value[index]
+            });
+        });
     } else if (Array.isArray(property) && value !== undefined) {
         property.map(item => {
             payload.push({
@@ -230,4 +238,10 @@ export function openFile(entity, docType, docId, fileType, fileId) {
         fileId;
 
     window.open(url, '_blank');
+}
+
+export function getRequest() {
+    const url = config.API_URL + '/' + Array.from(arguments).join('/');
+    
+    return axios.get(url);
 }
