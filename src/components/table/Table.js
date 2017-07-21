@@ -267,8 +267,12 @@ class Table extends Component {
     }
 
     handleClickOutside = (event) => {
-        if(event.target.parentNode !== document &&
-            !event.target.parentNode.className.includes('notification')) {
+        const { showIncludedViewOnSelect } = this.props;
+        if(
+            event.target.parentNode !== document &&
+            (event.target.parentNode &&
+            !event.target.parentNode.className.includes('notification'))
+        ) {
             const item = event.path;
             if(item) {
                 for(let i = 0; i < item.length; i++){
@@ -282,6 +286,7 @@ class Table extends Component {
             }
 
             this.deselectAllProducts();
+            showIncludedViewOnSelect && showIncludedViewOnSelect(false);
         }
     }
 
@@ -680,10 +685,36 @@ class Table extends Component {
         })
     }
 
+    handleShortcutIndent = (expand) => {
+        const {selected, rows, collapsedParentsRows} = this.state;
+        const {keyProperty} = this.props;
+
+        let node = "";
+        let isCollapsed = "";
+        selected.length === 1 && rows.map((item)=>{
+            if(item.id === selected[0]){
+                if(item.includedDocuments){
+                    node = item;
+                    isCollapsed = collapsedParentsRows.indexOf(item[keyProperty]) > -1;
+                }
+            }
+        });
+        
+        if(node){
+            if(isCollapsed && expand) {
+                this.handleRowCollapse(node, expand);
+            } else if(!isCollapsed && !expand) {
+                this.handleRowCollapse(node, expand);
+            } 
+        }
+        
+    }
+
     renderTableBody = () => {
         const {
             tabid, cols, type, docId, readonly, keyProperty, onDoubleClick,
-            mainTable, newRow, tabIndex, entity, indentSupported, collapsible
+            mainTable, newRow, tabIndex, entity, indentSupported, collapsible,
+            showIncludedViewOnSelect, supportIncludedViewOnSelect
         } = this.props;
 
         const {
@@ -711,8 +742,10 @@ class Table extends Component {
                         onDoubleClick={() => onDoubleClick &&
                             onDoubleClick(item[keyProperty])
                         }
-                        onMouseDown={(e) =>
-                            this.handleClick(e, item[keyProperty])
+                        onMouseDown={(e) => {
+                            this.handleClick(e, item[keyProperty]);
+                            supportIncludedViewOnSelect && showIncludedViewOnSelect(item.supportIncludedViews, item.includedView)
+                        }
                         }
                         handleRightClick={(e, fieldName) =>
                             this.handleRightClick(
@@ -909,6 +942,8 @@ class Table extends Component {
                         () => this.handleDelete() : ''
                     }
                     getAllLeafs={this.getAllLeafs}
+
+                    handleIndent = {this.handleShortcutIndent}
                 />
 
                 {!readonly &&

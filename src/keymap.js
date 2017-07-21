@@ -20,6 +20,7 @@ export default {
 
         OPEN_ADVANCED_EDIT: mod + '+' + 'e',
         OPEN_PRINT_RAPORT: mod + '+' + 'p',
+        OPEN_EMAIL: mod + '+' + 'x',
         DELETE_DOCUMENT: mod + '+' + 'd',
         NEW_DOCUMENT: mod + '+' + 'm',
         TOGGLE_EDIT_MODE: mod + '+' + 'o'
@@ -29,7 +30,9 @@ export default {
         REMOVE_SELECTED: mod + '+' + 'y',
         ADVANCED_EDIT: mod + '+' + 'a',
         //===================  POS  ======================
-        SELECT_ALL_LEAFS: mod + '+' + 's'
+        SELECT_ALL_LEAFS: mod + '+' + 's',
+        EXPAND_INDENT: '+',
+        COLLAPSE_INDENT: '-'
 
     },
     TABLE_CONTEXT: {
@@ -50,8 +53,7 @@ export default {
         COMPLETE_STATUS: mod + '+' + 'u'
     },
     MODAL_CONTEXT: {
-        START: mod + '+' + 's',
-        CLOSE: mod + '+' + 'c',
-        CANCEL: mod + '+' + 'q'
+        APPLY: mod + '+' + 'enter',
+        CANCEL: 'esc'
     }
 }

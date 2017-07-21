@@ -50,7 +50,7 @@ class QuickActions extends Component {
     componentDidUpdate = (prevProps) => {
         const {
             selected, refresh, shouldNotUpdate, viewId, selectedWindowType,
-            windowType
+            windowType, inBackground
         } = this.props;
 
         if(shouldNotUpdate){
@@ -59,6 +59,13 @@ class QuickActions extends Component {
 
         if(selectedWindowType && (selectedWindowType !== windowType)){
             return;
+        }
+
+        if (inBackground === true && (prevProps.inBackground === false)) {
+            // gained focus after modal closed
+            this.setState({
+                loading: false
+            });
         }
 
         if(
@@ -177,12 +184,16 @@ class QuickActions extends Component {
                             className={
                                 'btn-meta-outline-secondary btn-icon-sm ' +
                                 'btn-inline btn-icon pointer tooltip-parent ' +
-                                (isDropdownOpen ? 'btn-disabled ' : '')
+                                ((isDropdownOpen || disabledDuringProcessing) ? 'btn-disabled ' : '')
                             }
                             onMouseEnter={() => this.toggleTooltip(true)}
                             onMouseLeave={() => this.toggleTooltip(false)}
                             onClick={
-                                () => this.toggleDropdown(!isDropdownOpen)
+                                () => {
+                                    if (!disabledDuringProcessing) {
+                                        this.toggleDropdown(!isDropdownOpen)
+                                    }
+                                }
                             }
                         >
                             <i className="meta-icon-down-1" />

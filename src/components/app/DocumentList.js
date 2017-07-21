@@ -8,6 +8,7 @@ import QuickActions from './QuickActions';
 import BlankPage from '../BlankPage';
 import Table from '../table/Table';
 import Filters from '../filters/Filters';
+import FiltersStatic from '../filters/FiltersStatic';
 import SelectionAttributes from './SelectionAttributes';
 import DataLayoutWrapper from '../DataLayoutWrapper';
 
@@ -35,7 +36,8 @@ import {
 import {
     createViewRequest,
     browseViewRequest,
-    filterViewRequest
+    filterViewRequest,
+    deleteStaticFilter
 } from '../../actions/AppActions';
 
 class DocumentList extends Component {
@@ -58,7 +60,10 @@ class DocumentList extends Component {
             clickOutsideLock: false,
             refresh: null,
 
-            cachedSelection: null
+            cachedSelection: null,
+
+            isShowIncluded: false,
+            hasShowIncluded: false
         }
         this.fetchLayoutAndData();
     }
@@ -255,10 +260,13 @@ class DocumentList extends Component {
         })
     }
     
-    clearStaticFilters = () => {
-        const {dispatch, windowType, viewId} = this.props;
+    clearStaticFilters = (filterId) => {
+        const {dispatch, windowType} = this.props;
+        const {viewId} = this.state;
 
-        dispatch(push('/window/' + windowType));
+        deleteStaticFilter(windowType, viewId, filterId).then(response => {
+            dispatch(push('/window/' + windowType + '?viewId=' + response.data.viewId));
+        });
     }
 
     // FETCHING LAYOUT && DATA -------------------------------------------------
@@ -457,10 +465,23 @@ class DocumentList extends Component {
         }
     }
 
+    showIncludedViewOnSelect = (showIncludedView, data) => {
+        const {
+            dispatch
+        } = this.props;
+
+        this.setState({
+            isShowIncluded: showIncludedView ? true : false,
+            hasShowIncluded: showIncludedView ? true : false
+        }, ()=> {
+            showIncludedView && dispatch(setListIncludedView(data.windowId, data.viewId));
+        });
+    }
+
     render() {
         const {
             layout, data, viewId, clickOutsideLock, refresh, page, filters,
-            cachedSelection
+            cachedSelection, isShowIncluded, hasShowIncluded
         } = this.state;
 
         const {
@@ -485,8 +506,8 @@ class DocumentList extends Component {
                 <div
                     className={
                         'document-list-wrapper ' +
-                        (isIncluded ? 'document-list-included ' : '') +
-                        (hasIncluded ? 'document-list-has-included ' : '')
+                        (isShowIncluded || isIncluded ? 'document-list-included ' : '') +
+                        (hasShowIncluded || hasIncluded ? 'document-list-has-included ' : '')
                     }
                 >
                         {!readonly && <div
@@ -509,7 +530,11 @@ class DocumentList extends Component {
                                     filterData={layout.filters}
                                     filtersActive={filters}
                                     updateDocList={this.handleFilterChange}
-                                    clearStaticFilters={this.clearStaticFilters}
+                                />}
+                                {data.staticFilters && <FiltersStatic
+                                    {...{windowType, viewId}}
+                                    data={data.staticFilters}
+                                    clearFilters={this.clearStaticFilters}
                                 />}
                             </div>
                             <QuickActions
@@ -519,6 +544,7 @@ class DocumentList extends Component {
                                 fetchOnInit={fetchQuickActionsOnInit}
                                 disabled={hasIncluded}
                                 shouldNotUpdate={inBackground && !hasIncluded}
+                                inBackground={disablePaginationShortcuts}
                             />
                         </div>}
                         <div className="document-list-body">
@@ -556,6 +582,8 @@ class DocumentList extends Component {
                                 refreshSelection={this.state.refreshSelection}
                                 queryLimitHit={data.queryLimitHit}
                                 doesSelectionExist={this.doesSelectionExist}
+                                showIncludedViewOnSelect={this.showIncludedViewOnSelect}
+                                supportIncludedViewOnSelect={layout.supportIncludedViewOnSelect}
                                 {...{isIncluded, disconnectFromState, autofocus,
                                     open, page, closeOverlays, inBackground,
                                     disablePaginationShortcuts, isModal,

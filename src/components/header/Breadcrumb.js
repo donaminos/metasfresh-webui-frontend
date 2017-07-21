@@ -60,7 +60,9 @@ class Breadcrumb extends Component {
             handleMenuOverlay, windowType
         } = this.props;
 
-        if(menu && menu.children && menu.children.elementId) {
+        const noChildNodes = menu && menu.children && (menu.children.length === 0);
+
+        if(menu && (menu.elementId || noChildNodes)) {
             (windowType) && this.linkToPage(windowType);
         } else {
             handleMenuOverlay(e, menu.nodeId);
@@ -96,7 +98,7 @@ class Breadcrumb extends Component {
                 >
                     <span className="header-item icon-sm">
                         {index ?
-                            menu.children.captionBreadcrumb :
+                            menu.caption :
                             <i className="meta-icon-menu" />
                         }
                     </span>
