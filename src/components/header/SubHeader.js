@@ -2,8 +2,9 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import {connect} from 'react-redux';
 import onClickOutside from 'react-onclickoutside';
+import counterpart from 'counterpart';
 
-import {updateBreadcrumb} from '../../actions/MenuActions';
+import {updateBreadcrumb, elementPathRequest} from '../../actions/MenuActions';
 
 import Actions from './Actions';
 
@@ -16,12 +17,19 @@ class Subheader extends Component {
         super(props);
 
         this.state = {
-            pdfSrc: null
+            pdfSrc: null,
+            elementPath: ''
         }
     }
 
     componentDidMount() {
         document.getElementsByClassName('js-subheader-column')[0].focus();
+
+        elementPathRequest('window', this.props.windowType).then(response => {
+            this.setState({
+                elementPath: response.data
+            });
+        });
     }
 
     handleKeyDown = (e) => {
@@ -116,8 +124,13 @@ class Subheader extends Component {
     renderNavColumn = () => {
         const {
             dataId, windowType, openModal, closeSubheader, handlePrint,
-            handleDelete, docNo, redirect, breadcrumb, siteName
+            handleDelete, docNo, redirect, breadcrumb, siteName, editmode,
+            handleEditModeToggle, handleEmail
         } = this.props;
+
+        const {
+            elementPath
+        } = this.state;
 
         const docLinks = dataId && [
             <div
@@ -129,7 +142,8 @@ class Subheader extends Component {
                     closeSubheader();
                 }}
             >
-                <i className="meta-icon-edit" /> Advanced Edit
+                <i className="meta-icon-edit" />
+                {counterpart.translate('window.advancedEdit.caption')}
                 <span className="tooltip-inline">
                     {keymap.GLOBAL_CONTEXT.OPEN_ADVANCED_EDIT}
                 </span>
@@ -138,11 +152,24 @@ class Subheader extends Component {
                 key={1}
                 className="subheader-item js-subheader-item"
                 tabIndex={0}
+                onClick={() => {handleEmail(); closeSubheader()}}
+            >
+                <i className="meta-icon-mail" />
+                {counterpart.translate('window.email.caption')}
+                <span className="tooltip-inline">
+                    {keymap.GLOBAL_CONTEXT.OPEN_EMAIL}
+                </span>
+            </div>,
+            <div
+                key={2}
+                className="subheader-item js-subheader-item"
+                tabIndex={0}
                 onClick={() => {
                     handlePrint(windowType, dataId, docNo); closeSubheader()
                 }}
             >
-                <i className="meta-icon-print" /> Print
+                <i className="meta-icon-print" />
+                {counterpart.translate('window.Print.caption')}
                 <span className="tooltip-inline">
                     {keymap.GLOBAL_CONTEXT.OPEN_PRINT_RAPORT}
                 </span>
@@ -153,16 +180,16 @@ class Subheader extends Component {
                 tabIndex={0}
                 onClick={() => handleDelete()}
             >
-                <i className="meta-icon-delete" /> Delete
+                <i className="meta-icon-delete" />
+                {counterpart.translate('window.Delete.caption')}
                 <span className="tooltip-inline">
                     {keymap.GLOBAL_CONTEXT.DELETE_DOCUMENT}
                 </span>
             </div>
         ]
 
-        const currentNode = breadcrumb &&
-            breadcrumb[breadcrumb.length - 1] &&
-            breadcrumb[breadcrumb.length - 1].children;
+        const currentNode = elementPath &&
+                elementPath.children[elementPath.children.length-1];
 
         return (
             <div
@@ -178,8 +205,12 @@ class Subheader extends Component {
                         transparentBookmarks={!!siteName}
                         updateData={this.handleUpdateBreadcrumb}
                     >
-                        <span>
-                            {currentNode ? currentNode.caption : siteName}
+                        <span 
+                            title={
+                                currentNode ? currentNode.caption : siteName
+                            }
+                            className="subheader-title">
+                                {currentNode ? currentNode.caption : siteName}
                         </span>
                     </BookmarkButton>
                 </div>
@@ -192,12 +223,28 @@ class Subheader extends Component {
                         '/window/'+ windowType + '/new'
                     ); closeSubheader()}
                 }>
-                    <i className="meta-icon-report-1" /> New
+                    <i className="meta-icon-report-1" />
+                    {counterpart.translate('window.new.caption')}
                     <span className="tooltip-inline">
                         {keymap.GLOBAL_CONTEXT.NEW_DOCUMENT}
                     </span>
                 </div>}
                 {docLinks}
+                {editmode !== undefined && <div
+                    key={editmode}
+                    className="subheader-item js-subheader-item"
+                    tabIndex={0}
+                    onClick={() => {handleEditModeToggle(); closeSubheader()}}
+                >
+                    <i className="meta-icon-settings" />
+                    {editmode ?
+                        counterpart.translate('window.closeEditMode') :
+                        counterpart.translate('window.openEditMode')
+                    }
+                    <span className="tooltip-inline">
+                        {keymap.GLOBAL_CONTEXT.TOGGLE_EDIT_MODE}
+                    </span>
+                </div>}
             </div>
         )
     }
@@ -218,6 +265,7 @@ class Subheader extends Component {
     }
 
     render() {
+
         return (
             <div
                 className="subheader-container overlay-shadow subheader-open js-not-unselect"

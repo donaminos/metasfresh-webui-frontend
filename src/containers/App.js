@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Provider } from 'react-redux';
 import axios from 'axios';
+import counterpart from 'counterpart';
 
 import configureStore from '../store/configureStore';
 import { getRoutes } from '../routes.js';
@@ -10,6 +11,7 @@ import { syncHistoryWithStore, push } from 'react-router-redux';
 import { Router, browserHistory } from 'react-router';
 
 import Auth from '../services/Auth';
+import Translation from '../components/Translation';
 
 import NotificationHandler
     from '../components/notifications/NotificationHandler';
@@ -30,6 +32,7 @@ import '../assets/css/styles.css';
 
 const store = configureStore(browserHistory);
 const history = syncHistoryWithStore(browserHistory, store);
+
 
 export default class App extends Component {
     constructor() {
@@ -59,6 +62,8 @@ export default class App extends Component {
                 store.dispatch(setProcessSaved());
                 logoutSuccess(this.auth);
                 store.dispatch(push('/login?redirect=true'));
+            }else if(error.response.status == 503){
+                store.dispatch(noConnection(true));
             }else if(error.response.status != 404){
                 if(localStorage.isLogged){
                     const errorMessenger = (code) => {
@@ -109,21 +114,26 @@ export default class App extends Component {
         getAvailableLang().then(response => {
             const {defaultValue, values} = response.data;
             const valuesFlatten = values.map(item => Object.keys(item)[0]);
-
-            languageSuccess(valuesFlatten.indexOf(navigator.language) > -1 ?
-                navigator.language : defaultValue);
+            const lang = valuesFlatten.indexOf(navigator.language) > -1 ?
+                navigator.language : defaultValue;
+                
+            languageSuccess(lang);
         });
+        
+        counterpart.setMissingEntryGenerator(() => '');
     }
 
     render() {
         return (
             <Provider store={store}>
-                <NotificationHandler>
-                    <Router
-                        history={history}
-                        routes={getRoutes(store, this.auth)}
-                    />
-                </NotificationHandler>
+                <Translation>
+                    <NotificationHandler>
+                        <Router
+                            history={history}
+                            routes={getRoutes(store, this.auth)}
+                        />
+                    </NotificationHandler>
+                </Translation>
             </Provider>
         )
     }

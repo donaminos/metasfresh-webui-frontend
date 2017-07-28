@@ -237,6 +237,17 @@ button, .btn {
     padding-left: 1rem;
 }
 
+.btn-meta-disabled,
+.btn-meta-disabled:hover,
+.btn-meta-disabled:focus,
+.btn-meta-disabled:active {
+    background-color: $brand-dark-color;
+    color: $brand-font-color;
+    outline: none;
+    box-shadow:none;
+    border:0;
+}
+
 
 /*
 *  CUSTOM CHECKBOX
@@ -699,6 +710,10 @@ input:checked + .input-slider:before {
 
 .input-secondary .raw-lookup-wrapper {
     padding: .1rem .50rem;
+}
+
+.lookup-wrapper-disabled {
+    pointer-events: none;
 }
 
 .raw-lookup-disabled .input-dropdown-container {

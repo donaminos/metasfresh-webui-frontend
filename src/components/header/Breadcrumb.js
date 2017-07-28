@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import {push} from 'react-router-redux';
+import counterpart from 'counterpart';
 
 import MenuOverlay from './MenuOverlay';
 import Tooltips from '../tooltips/Tooltips';
@@ -59,7 +60,9 @@ class Breadcrumb extends Component {
             handleMenuOverlay, windowType
         } = this.props;
 
-        if(menu && menu.children && menu.children.elementId) {
+        const noChildNodes = menu && ((menu.type === 'window') || (menu.children && (menu.children.length === 0)));
+
+        if(menu && (menu.elementId || noChildNodes)) {
             (windowType) && this.linkToPage(windowType);
         } else {
             handleMenuOverlay(e, menu.nodeId);
@@ -95,7 +98,7 @@ class Breadcrumb extends Component {
                 >
                     <span className="header-item icon-sm">
                         {index ?
-                            menu.children.captionBreadcrumb :
+                            menu.caption :
                             <i className="meta-icon-menu" />
                         }
                     </span>
@@ -129,7 +132,11 @@ class Breadcrumb extends Component {
                     <Tooltips
                         extraClass="tooltip-home-menu"
                         name={keymap.GLOBAL_CONTEXT.OPEN_NAVIGATION_MENU}
-                        action={'Navigation'}
+                        action= {
+                            counterpart.translate(
+                                'mainScreen.navigation.tooltip'
+                                )
+                        }
                         type={''}
                     />
                 }

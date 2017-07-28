@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import {connect} from 'react-redux';
-
 import MenuOverlayContainer from '../components/header/MenuOverlayContainer';
 import {push} from 'react-router-redux';
 import DebounceInput from 'react-debounce-input';
 import Container from '../components/Container';
+import counterpart from 'counterpart';
 
 import {
     rootRequest,
@@ -36,30 +36,37 @@ class NavigationTree extends Component {
         document.getElementById('search-input').focus();
     }
 
-    getData = (callback) => {
-        rootRequest().then(response => {
-            this.setState(Object.assign({}, this.state, {
-                rootResults: response.data,
-                queriedResults: response.data.children,
-                query: ''
-            }), () => {
-                callback();
-            })
-        }).catch((err) => {
-            if(err.response && err.response.status === 404) {
+    getData = (callback, doNotResetState) => {
+        const {query} = this.state;
+
+        if(doNotResetState && query){
+            this.queryRequest(query);
+        } else {
+            rootRequest().then(response => {
                 this.setState(Object.assign({}, this.state, {
-                    queriedResults: [],
-                    rootResults: {},
+                    rootResults: response.data,
+                    queriedResults: response.data.children,
                     query: ''
                 }), () => {
                     callback();
                 })
-            }
-        });
+            }).catch((err) => {
+                if(err.response && err.response.status === 404) {
+                    this.setState(Object.assign({}, this.state, {
+                        queriedResults: [],
+                        rootResults: {},
+                        query: ''
+                    }), () => {
+                        callback();
+                    })
+                }
+            });
+        }
     }
 
+
     updateData = () => {
-        this.getData();
+        this.getData(false, true);
     }
 
     openModal = (windowType, type, caption, isAdvanced) => {
@@ -74,23 +81,27 @@ class NavigationTree extends Component {
                 query: e.target.value
             });
 
-            queryPathsRequest(e.target.value, '', true)
-                .then(response => {
-                    this.setState({
-                        queriedResults: response.data.children
-                    })
-                }).catch((err) => {
-                    if(err.response && err.response.status === 404) {
-                        this.setState({
-                            queriedResults: [],
-                            rootResults: {}
-                        })
-                    }
-                });
+            this.queryRequest(e.target.value);
+
         }else{
             this.getData(this.clearValue);
         }
+    }
 
+    queryRequest = (value) => {
+        queryPathsRequest(value, '', true)
+            .then(response => {
+                this.setState({
+                    queriedResults: response.data.children
+                })
+            }).catch((err) => {
+                if(err.response && err.response.status === 404) {
+                    this.setState({
+                        queriedResults: [],
+                        rootResults: {}
+                    })
+                }
+            });
     }
 
     clearValue = () => {
@@ -128,9 +139,11 @@ class NavigationTree extends Component {
         }
     }
 
-    handleRedirect = (elementId) => {
+    handleRedirect = (elementId, isNew, type) => {
         const {dispatch} = this.props;
-        dispatch(push('/window/' + elementId));
+        dispatch(push(
+            '/' + (type ? type : 'window') + '/' + elementId
+        ));
     }
 
     handleNewRedirect = (elementId) => {
@@ -159,48 +172,54 @@ class NavigationTree extends Component {
         const {rootResults, queriedResults, query} = this.state;
 
         return(
-            <div>
+            <div className="sitemap">
                 <div className="search-wrapper">
                     <div className="input-flex input-primary">
                         <i className="input-icon meta-icon-preview"/>
+
                         <DebounceInput
                             debounceTimeout={250}
                             type="text" id="search-input"
                             className="input-field"
-                            placeholder="Type phrase here"
-                            onChange={e => this.handleQuery(e) }
-                            onKeyDown={(e) =>
-                                this.handleKeyDown(e)}
+                            placeholder={counterpart.translate(
+                                'window.type.placeholder'
+                            )}
+                            onChange={this.handleQuery}
+                            onKeyDown={this.handleKeyDown}
                         />
-                        {query && <i
-                            className="input-icon meta-icon-close-alt pointer"
-                            onClick={e => this.handleClear(e) }
-                            />}
+
+                        {query && (
+                            <i
+                                className="input-icon meta-icon-close-alt pointer"
+                                onClick={this.handleClear}
+                            />
+                        )}
                     </div>
                 </div>
-                <p
-                    className="menu-overlay-header menu-overlay-header-main menu-overlay-header-spaced"
-                    >
+
+                <p className="menu-overlay-header menu-overlay-header-main menu-overlay-header-spaced">
                     {rootResults.caption}
                 </p>
+
                 <div className="column-wrapper">
                     {queriedResults && queriedResults.map((subitem, subindex) =>
                         <MenuOverlayContainer
                             key={subindex}
                             printChildren={true}
                             showBookmarks={true}
+                            openModal={this.openModal}
+                            updateData={this.updateData}
+                            onKeyDown={this.handleKeyDown}
                             handleClickOnFolder={this.handleDeeper}
                             handleRedirect={this.handleRedirect}
                             handleNewRedirect={this.handleNewRedirect}
-                            openModal={this.openModal}
-                            updateData={this.updateData}
-                            onKeyDown={(e) => this.handleKeyDown(e)}
                             {...subitem}
                         />
                     )}
-                    { queriedResults.length === 0 && query != '' &&
+
+                    {(queriedResults.length === 0) && (query !== '') && (
                         <span>There are no results</span>
-                    }
+                    )}
                 </div>
             </div>
         )

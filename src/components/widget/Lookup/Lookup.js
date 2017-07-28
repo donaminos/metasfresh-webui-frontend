@@ -22,7 +22,8 @@ class Lookup extends Component {
             property: '',
             fireClickOutside: false,
             initialFocus: false,
-            localClearing: false
+            localClearing: false,
+            fireDropdownList: false
         }
     }
 
@@ -77,6 +78,16 @@ class Lookup extends Component {
         });
     }
 
+    openDropdownList = () => {
+        this.setState({
+            fireDropdownList: true
+        }, () => {
+            this.setState({
+                fireDropdownList: false
+            })
+        })
+    }
+
     resetLocalClearing = () => {
         this.setState({
             localClearing: false
@@ -105,7 +116,7 @@ class Lookup extends Component {
 
         const {
             isInputEmpty, property, fireClickOutside, initialFocus,
-            localClearing
+            localClearing, fireDropdownList
         } = this.state;
 
         return (
@@ -124,7 +135,8 @@ class Lookup extends Component {
                         (
                             (!validStatus.valid && !validStatus.initialValue)
                         )
-                    ) ? ' input-error ' : '')
+                    ) ? ' input-error ' : '') +
+                    (readonly ? ' lookup-wrapper-disabled ' : ' ')
                 }
             >
 
@@ -147,6 +159,7 @@ class Lookup extends Component {
                                 initialFocus={index===0 ? initialFocus : false}
                                 setNextProperty={this.setNextProperty}
                                 lookupEmpty={isInputEmpty}
+                                fireDropdownList={fireDropdownList}
                                 {...{placeholder, readonly, tabIndex,
                                 windowType, parameterName, entity, dataId,
                                 isModal, recent, rank, updated, filterWidget,
@@ -167,7 +180,7 @@ class Lookup extends Component {
                                 className={
                                     'raw-lookup-wrapper ' +
                                     'raw-lookup-wrapper-bcg ' +
-                                    (disabled ? 'raw-lookup-disabled':'')
+                                    (disabled || readonly ? 'raw-lookup-disabled':'')
                                     }
                                 key={index}>
                                     <List
@@ -199,8 +212,13 @@ class Lookup extends Component {
                 })
             }
             {isInputEmpty ?
-                <div className="input-icon input-icon-lg raw-lookup-wrapper">
-                    <i className="meta-icon-preview" />
+                <div
+                    className="input-icon input-icon-lg raw-lookup-wrapper"
+                    onClick={this.openDropdownList}
+                >   
+                    { !readonly &&
+                        <i className="meta-icon-preview" />
+                    }
                 </div> :
                 <div className="input-icon input-icon-lg raw-lookup-wrapper">
                     {!readonly && <i

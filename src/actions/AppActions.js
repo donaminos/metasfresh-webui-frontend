@@ -1,5 +1,6 @@
 import * as types from '../constants/ActionTypes'
 import axios from 'axios';
+import counterpart from 'counterpart';
 import {replace} from 'react-router-redux';
 import Moment from 'moment';
 import {LOCAL_LANG}  from '../constants/Constants';
@@ -42,17 +43,39 @@ export function browseViewRequest(
     );
 }
 
+export function deleteView(
+    windowId, viewId
+){
+    return axios.delete(
+        config.API_URL +
+        '/documentView/' +
+        windowId + '/' +
+        viewId
+    );
+}
+
 export function createViewRequest(
     windowType, viewType, pageLength, filters, refDocType = null,
-    refDocId = null
+    refDocId = null, refTabId = null, refRowIds = null
 ){
+    let referencing = null;
+
+    if (refDocType && refDocId) {
+        referencing = {
+            'documentType': refDocType,
+            'documentId': refDocId
+        };
+
+        if (refTabId && refRowIds) {
+            referencing.tabId = refTabId;
+            referencing.rowIds = refRowIds;
+        }
+    }
+
     return axios.post(config.API_URL + '/documentView/' + windowType, {
         'documentType': windowType,
         'viewType': viewType,
-        'referencing': (refDocType && refDocId) ? {
-            'documentType': refDocType,
-            'documentId': refDocId
-        }: null,
+        'referencing': referencing,
         'filters': filters
     });
 }
@@ -62,6 +85,15 @@ export function filterViewRequest(windowType, viewId, filters){
     '/'+viewId+'/filter', {
         'filters': filters
     });
+}
+
+export function deleteStaticFilter(windowId, viewId, filterId) {
+    return axios.delete(
+        config.API_URL +
+        '/documentView/' + windowId +
+        '/' + viewId +
+        '/staticFilter/' + filterId
+    );
 }
 
 export function loginRequest(username, password){
@@ -119,7 +151,7 @@ export function getAttributesInstance(
 
 export function getImageAction(id) {
     return axios({
-        url: `${config.API_URL}/image/${id}`,
+        url: `${config.API_URL}/image/${id}?maxWidth=200&maxHeight=200`,
         responseType: 'blob'
     })
         .then(response => response.data);
@@ -158,12 +190,23 @@ export function setUserDashboardWidgets(payload) {
     return axios.patch(config.API_URL + '/dashboard/kpis', payload);
 }
 
+export function getMessages(lang) {
+    return axios.get(
+        config.API_URL + '/i18n/messages' + (lang ? '?=' + lang : '')
+    );
+}
+
 // END OF REQUESTS
 
 export function loginSuccess(auth) {
     return dispatch => {
         localStorage.setItem('isLogged', true);
-
+        
+        getMessages().then(response => {
+            counterpart.registerTranslations('lang', response.data);
+            counterpart.setLocale('lang');
+        });
+        
         getUserSession().then(session => {
             dispatch(userSessionInit(session.data));
             languageSuccess(Object.keys(session.data.language)[0]);
@@ -171,6 +214,17 @@ export function loginSuccess(auth) {
                 const me = JSON.parse(msg.body);
                 dispatch(userSessionUpdate(me));
                 me.language && languageSuccess(Object.keys(me.language)[0]);
+                getNotifications().then(response => {
+                    dispatch(getNotificationsSuccess(
+                        response.data.notifications,
+                        response.data.unreadCount
+                    ));
+                });
+                
+                getMessages().then(response => {
+                    counterpart.registerTranslations('lang', response.data);
+                    counterpart.setLocale('lang');
+                });
             });
         })
 

@@ -14,7 +14,7 @@ class TableItem extends Component {
         };
     }
 
-    handleEditProperty = (e, property, callback) => {
+    handleEditProperty = (e, property, callback, item) => {
         const { activeCell } = this.state;
         const elem = document.activeElement;
 
@@ -23,16 +23,14 @@ class TableItem extends Component {
                 activeCell: elem
             })
         }
-
-        this.editProperty(e, property, callback);
+        
+        this.editProperty(e, property, callback, item);
     }
 
-    editProperty = (e, property, callback) => {
+    editProperty = (e, property, callback, item) => {
         const { changeListenOnTrue, changeListenOnFalse } = this.props;
-        if(
-            !document.activeElement.className.includes('cell-disabled') ||
-            document.activeElement.className.includes('cell-readonly')
-        ) {
+
+        if( item ? !item.readonly : true ) {
             this.setState({
                 edited: property
             }, ()=>{
@@ -99,7 +97,7 @@ class TableItem extends Component {
         const {
             type, docId, rowId, tabId, readonly, mainTable, newRow,
             changeListenOnTrue, tabIndex, entity, getSizeClass,
-            handleRightClick
+            handleRightClick, caption, colspan
         } = this.props;
 
         const {
@@ -107,37 +105,47 @@ class TableItem extends Component {
         } = this.state;
 
         // Iterate over layout settings
-        return cols && cols.map((item, index) => {
-            const property = item.fields[0].field;
-            const widgetData =
-                item.fields.map(prop => cells && cells[prop.field] || -1);
-            const {supportZoomInto} = item.fields[0];
 
-            return (
-                <TableCell
-                    {...{getSizeClass, entity, type, docId, rowId, tabId, item,
-                        readonly, widgetData, tabIndex, listenOnKeys }}
-                    key={index}
-                    isEdited={edited === property}
-                    onDoubleClick={(e) =>
-                        this.handleEditProperty(e, property, true)
-                    }
-                    onClickOutside={(e) => {
-                        this.handleEditProperty(e); changeListenOnTrue()}
-                    }
-                    disableOnClickOutside={edited !== property}
-                    onKeyDown = {!mainTable ?
-                        (e) => this.handleKey(e, property) : ''
-                    }
-                    updatedRow={updatedRow || newRow}
-                    updateRow={this.updateRow}
-                    listenOnKeysFalse={this.listenOnKeysFalse}
-                    closeTableField={(e) => this.closeTableField(e)}
-                    handleRightClick={(e) =>
-                        handleRightClick(e, supportZoomInto ? property : null)}
-                />
-            )
-        })
+            if(colspan) {
+                return (
+                    <td colSpan={cols.length}>
+                        {caption}
+                    </td>
+                )
+            } else {
+                return cols && cols.map((item, index) => {
+                    const property = item.fields[0].field;
+                    const widgetData =
+                        item.fields.map(prop => cells && cells[prop.field] || -1);
+                    const {supportZoomInto} = item.fields[0];
+
+                    return (
+                        <TableCell
+                            {...{getSizeClass, entity, type, docId, rowId, tabId, item,
+                                readonly, widgetData, tabIndex, listenOnKeys, caption }}
+                            key={index}
+                            
+                            isEdited={edited === property}
+                            onDoubleClick={(e) =>
+                                this.handleEditProperty(e, property, true, widgetData[0])
+                            }
+                            onClickOutside={(e) => {
+                                this.handleEditProperty(e); changeListenOnTrue()}
+                            }
+                            disableOnClickOutside={edited !== property}
+                            onKeyDown = {!mainTable ?
+                                (e) => this.handleKey(e, property) : ''
+                            }
+                            updatedRow={updatedRow || newRow}
+                            updateRow={this.updateRow}
+                            listenOnKeysFalse={this.listenOnKeysFalse}
+                            closeTableField={(e) => this.closeTableField(e)}
+                            handleRightClick={(e) =>
+                                handleRightClick(e, supportZoomInto ? property : null)}
+                        />
+                    )
+                })
+            }
     }
 
     updateRow = () => {
@@ -254,8 +262,8 @@ class TableItem extends Component {
     render() {
         const {
             isSelected, fieldsByName, cols, onMouseDown, onDoubleClick, odd,
-            indentSupported, contextType, lastChild, processed,
-            includedDocuments, notSaved
+            indentSupported, indent, contextType, lastChild, processed,
+            includedDocuments, notSaved, caption
         } = this.props;
 
         return (
@@ -269,10 +277,11 @@ class TableItem extends Component {
                     ((processed && lastChild && !includedDocuments) ?
                         'row-boundary ': ''
                     ) +
-                    (notSaved ? 'row-not-saved ': '')
+                    (notSaved ? 'row-not-saved ': '') +
+                    (caption ? 'item-caption ' : '')
                 }
             >
-                {indentSupported &&
+                {indentSupported && indent &&
                     <td className="indented">
                         {this.renderTree(contextType)}
                     </td>

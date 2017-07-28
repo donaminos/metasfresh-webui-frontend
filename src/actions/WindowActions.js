@@ -404,27 +404,18 @@ export function patch(
         let responsed = false;
 
         dispatch(indicatorState('pending'));
-        let time = 0
-        let timeoutLoop = () => {
-            setTimeout(function() {
-                time = 999;
-                if (responsed) {
-                    dispatch(indicatorState('saved'));
-                } else {
-                    timeoutLoop();
-                }
-            }, time);
-        }
-        timeoutLoop();
 
         return patchRequest(
             entity, windowType, id, tabId, rowId, property, value, null, null,
             isAdvanced
         ).then(response => {
             responsed = true;
+
             dispatch(mapDataToState(
                 response.data, isModal, rowId, id, windowType, isAdvanced
             ));
+
+            dispatch(indicatorState('saved'));
         }).catch(() => {
             getData(
                 entity, windowType, id, tabId, rowId, null, null, isAdvanced
@@ -792,7 +783,7 @@ export function findRowByPropName(arr, name) {
 export function getItemsByProperty(arr, prop, value) {
     let ret = [];
 
-    arr.map((item) => {
+    arr && arr.map((item) => {
         if (item[prop] === value) {
             ret.push(item);
         }
@@ -831,8 +822,37 @@ export function mapIncluded(
             )
         }
     }
-
     return result;
+}
+
+export function collapsedMap(
+    node, isCollapsed, initialMap
+) {
+    let collapsedMap = [];
+    if(initialMap){
+        if(!isCollapsed) {
+            initialMap.splice(
+                initialMap.indexOf(node.includedDocuments[0]),
+                node.includedDocuments.length
+                );
+            collapsedMap = initialMap;
+        } else {
+            initialMap.map(item => {
+                collapsedMap.push(item);
+                if(item.id === node.id) {
+                    collapsedMap = collapsedMap.concat(node.includedDocuments);
+
+                }
+            });
+        }
+
+    } else {
+        if(node.includedDocuments){
+            collapsedMap.push(node);
+        }
+    }
+
+    return collapsedMap;
 }
 
 export function connectWS(topic, cb) {

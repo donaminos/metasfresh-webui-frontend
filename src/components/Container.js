@@ -7,6 +7,7 @@ import Modal from './app/Modal';
 import RawModal from './app/RawModal';
 import DocumentList from './app/DocumentList';
 
+
 class Container extends Component {
     constructor(props){
         super(props);
@@ -21,7 +22,7 @@ class Container extends Component {
             handleDeletedStatus, dropzoneFocused, notfound, rawModal, modal,
             selected, selectedWindowType, indicator, modalTitle, setModalTitle,
             includedView, closeModalCallback, setModalDescription,
-            modalDescription
+            modalDescription, editmode, handleEditModeToggle
         } = this.props;
 
         return (
@@ -33,7 +34,8 @@ class Container extends Component {
                             handleDeletedStatus, isDocumentNotSaved,
                             showIndicator, query, siteName, showSidelist,
                             attachments, actions, references, windowType,
-                            breadcrumb, dataId, dropzoneFocused, notfound, docId
+                            breadcrumb, dataId, dropzoneFocused, notfound,
+                            docId, editmode, handleEditModeToggle
                         }}
                         docStatus = {docActionElem}
                     />
@@ -86,6 +88,8 @@ class Container extends Component {
                              modalTitle={modalTitle}
                              modalDescription={this.modalDescription}
                              modalDescription={modalDescription}
+                             windowType={rawModal.type}
+                             viewId={rawModal.viewId}
                          >
                             <div className="document-lists-wrapper">
                                  <DocumentList
@@ -96,6 +100,7 @@ class Container extends Component {
                                      selectedWindowType={selectedWindowType}
                                      setModalTitle={setModalTitle}
                                      setModalDescription={setModalDescription}
+                                     fetchQuickActionsOnInit={true}
                                      modalDescription={this.modalDescription}
                                      isModal={true}
                                      processStatus={processStatus}
@@ -104,6 +109,7 @@ class Container extends Component {
                                          includedView.windowType &&
                                             includedView.viewId
                                      }
+                                     inModal={modal.visible}
                                  >
                                  </DocumentList>
                                  {includedView.windowType &&
@@ -115,6 +121,8 @@ class Container extends Component {
                                          windowType={includedView.windowType}
                                          defaultViewId={includedView.viewId}
                                          isIncluded={true}
+                                         processStatus={processStatus}
+                                         inModal={modal.visible}
                                      />
                                  }
                             </div>

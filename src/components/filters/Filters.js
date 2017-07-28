@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-
+import {push} from 'react-router-redux';
+import counterpart from 'counterpart';
 import FiltersFrequent from './FiltersFrequent';
 import FiltersNotFrequent from './FiltersNotFrequent';
 
@@ -89,7 +90,9 @@ class Filters extends Component {
     sortFilters = (data) => {
         return {
             frequentFilters: data.filter(filter => filter.frequent),
-            notFrequentFilters: data.filter(filter => !filter.frequent)
+            notFrequentFilters: data.filter(filter =>
+                !filter.frequent && !filter.static),
+            staticFilters: data.filter(filter => filter.static)
         }
     }
 
@@ -116,12 +119,15 @@ class Filters extends Component {
     render() {
         const {filterData, windowType, viewId} = this.props;
         const {
-            frequentFilters, notFrequentFilters
+            frequentFilters, notFrequentFilters, staticFilters
         } = this.sortFilters(filterData);
         const {notValidFields, widgetShown, filter} = this.state;
+
         return (
             <div className="filter-wrapper js-not-unselect">
-                <span>Filters: </span>
+                <span>{counterpart.translate(
+                    'window.filters.caption'
+                )}: </span>
                 <div className="filter-wrapper">
                     {!!frequentFilters.length &&
                         <FiltersFrequent

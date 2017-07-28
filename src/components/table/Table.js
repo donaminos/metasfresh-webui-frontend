@@ -9,6 +9,7 @@ import {
     selectTableItems,
     deleteLocal,
     mapIncluded,
+    collapsedMap,
     getItemsByProperty,
     getZoomIntoWindow
 } from '../../actions/WindowActions';
@@ -52,7 +53,8 @@ class Table extends Component {
             rows: [],
             collapsedRows: [],
             collapsedParentsRows: [],
-            pendingInit: true
+            pendingInit: true,
+            collapsedArrayMap: []
         }
     }
 
@@ -67,12 +69,19 @@ class Table extends Component {
     componentDidUpdate(prevProps, prevState) {
         const {
             mainTable, open, rowData, defaultSelected, disconnectFromState,
-            dispatch, type
+            dispatch, type, refreshSelection, supportIncludedViewOnSelect,
+            showIncludedViewOnSelect, viewId
         } = this.props;
 
         const {
-            selected
+            selected, rows
         } = this.state;
+
+        if((JSON.stringify(prevState.rows) !==
+            JSON.stringify(rows))){
+                this.showSelectedIncludedView(selected);
+        }
+        
 
         if(mainTable && open){
             this.table.focus();
@@ -95,12 +104,33 @@ class Table extends Component {
 
         if(
             JSON.stringify(prevProps.defaultSelected) !==
-            JSON.stringify(defaultSelected)
+            JSON.stringify(defaultSelected) ||
+            JSON.stringify(prevProps.refreshSelection) !==
+            JSON.stringify(refreshSelection) && refreshSelection
         ){
             this.setState({
                 selected: defaultSelected
             })
         }
+
+        if(
+            JSON.stringify(prevProps.viewId) !==
+            JSON.stringify(viewId)
+        ){
+            this.setState({
+                selected: []
+            })
+        }
+    }
+
+    showSelectedIncludedView = (selected) => {
+        const {showIncludedViewOnSelect, supportIncludedViewOnSelect} = this.props;
+        const {rows} = this.state;
+        selected.length === 1 && supportIncludedViewOnSelect && rows.map(item=>{
+            if(item.id === selected[0]){
+                showIncludedViewOnSelect(item.supportIncludedViews, item.includedView)
+            }
+        });
     }
 
     getChildContext = () => {
@@ -122,7 +152,9 @@ class Table extends Component {
 
             this.setState({
                 rows: rowsData,
-                pendingInit: !rowsData
+                pendingInit: !rowsData,
+                collapsedParentsRows: [],
+                collapsedRows: []
             }, () => {
                 const {rows} = this.state;
 
@@ -131,12 +163,17 @@ class Table extends Component {
                     document.getElementsByClassName('js-table')[0].focus();
                 }
 
+                let mapCollapsed = [];
                 if(collapsible){
+
                     rows && !!rows.length && rows.map(row => {
                         if(
                             row.indent.length >= expandedDepth &&
                             row.includedDocuments
                         ){
+                            mapCollapsed = mapCollapsed.concat(
+                                collapsedMap(row)
+                            );
                             this.setState(prev => ({
                                 collapsedParentsRows:
                                     prev.collapsedParentsRows.concat(
@@ -154,6 +191,10 @@ class Table extends Component {
                         }
                     })
                 }
+
+                this.setState({
+                    collapsedArrayMap: mapCollapsed
+                });
             })
         } else {
             this.setState({
@@ -237,21 +278,27 @@ class Table extends Component {
     }
 
     triggerFocus = (idFocused, idFocusedDown) => {
-        const rowSelected = document.getElementsByClassName('row-selected');
-        if(rowSelected.length > 0){
-            if(typeof idFocused == 'number'){
-                rowSelected[0].children[idFocused].focus();
-            }
-            if(typeof idFocusedDown == 'number'){
-                rowSelected[rowSelected.length-1]
-                    .children[idFocusedDown].focus();
+        if (this.table) {
+            const rowSelected = this.table.getElementsByClassName('row-selected');
+            if(rowSelected.length > 0){
+                if(typeof idFocused == 'number'){
+                    rowSelected[0].children[idFocused].focus();
+                }
+                if(typeof idFocusedDown == 'number'){
+                    rowSelected[rowSelected.length-1]
+                        .children[idFocusedDown].focus();
+                }
             }
         }
     }
 
     handleClickOutside = (event) => {
-        if(event.target.parentNode !== document &&
-            !event.target.parentNode.className.includes('notification')) {
+        const { showIncludedViewOnSelect } = this.props;
+        if(
+            event.target.parentNode !== document &&
+            (event.target.parentNode &&
+            !event.target.parentNode.className.includes('notification'))
+        ) {
             const item = event.path;
             if(item) {
                 for(let i = 0; i < item.length; i++){
@@ -265,11 +312,12 @@ class Table extends Component {
             }
 
             this.deselectAllProducts();
+            showIncludedViewOnSelect && showIncludedViewOnSelect(false);
         }
     }
 
     handleKeyDown = (e) => {
-        const {selected, rows, listenOnKeys} = this.state;
+        const {selected, rows, listenOnKeys, collapsedArrayMap} = this.state;
 
         if(!listenOnKeys){
             return;
@@ -297,7 +345,9 @@ class Table extends Component {
             case 'ArrowDown': {
                 e.preventDefault();
 
-                const array = rows.map((item) => item[keyProperty]);
+                const array = collapsedArrayMap.length > 0 ?
+                    collapsedArrayMap.map((item) => item[keyProperty]) :
+                    rows.map((item) => item[keyProperty]);
                 const currentId = array.findIndex(x =>
                     x === selected[selected.length-1]
                 );
@@ -308,7 +358,8 @@ class Table extends Component {
 
                 if(!selectRange) {
                     this.selectOneProduct(
-                        array[currentId + 1], false, idFocused
+                        array[currentId + 1], false, idFocused,
+                        this.showSelectedIncludedView([array[currentId + 1]])
                     );
                 } else {
                     this.selectProduct(
@@ -320,7 +371,9 @@ class Table extends Component {
             case 'ArrowUp': {
                 e.preventDefault();
 
-                const array = rows.map(item => item[keyProperty]);
+                const array = collapsedArrayMap.length > 0 ?
+                    collapsedArrayMap.map((item) => item[keyProperty]) :
+                    rows.map((item) => item[keyProperty]);
                 const currentId = array.findIndex(x =>
                     x === selected[selected.length-1]
                 );
@@ -331,8 +384,10 @@ class Table extends Component {
 
                 if(!selectRange) {
                     this.selectOneProduct(
-                        array[currentId - 1], idFocused, false
+                        array[currentId - 1], idFocused, false,
+                        this.showSelectedIncludedView([array[currentId - 1]])
                     );
+                    
                 } else {
                     this.selectProduct(
                         array[currentId - 1], idFocused, false
@@ -613,7 +668,13 @@ class Table extends Component {
 
     handleRowCollapse = (node, collapsed) => {
         const {keyProperty} = this.props;
-        const {collapsedParentsRows, collapsedRows} = this.state;
+        const {
+            collapsedParentsRows, collapsedRows, collapsedArrayMap
+        } = this.state;
+
+        this.setState({
+            collapsedArrayMap: collapsedMap(node, collapsed, collapsedArrayMap)
+        });
 
         if(collapsed){
             this.setState(prev => ({
@@ -653,10 +714,36 @@ class Table extends Component {
         })
     }
 
+    handleShortcutIndent = (expand) => {
+        const {selected, rows, collapsedParentsRows} = this.state;
+        const {keyProperty} = this.props;
+
+        let node = "";
+        let isCollapsed = "";
+        selected.length === 1 && rows.map((item)=>{
+            if(item.id === selected[0]){
+                if(item.includedDocuments){
+                    node = item;
+                    isCollapsed = collapsedParentsRows.indexOf(item[keyProperty]) > -1;
+                }
+            }
+        });
+        
+        if(node){
+            if(isCollapsed && expand) {
+                this.handleRowCollapse(node, expand);
+            } else if(!isCollapsed && !expand) {
+                this.handleRowCollapse(node, expand);
+            } 
+        }
+        
+    }
+
     renderTableBody = () => {
         const {
             tabid, cols, type, docId, readonly, keyProperty, onDoubleClick,
-            mainTable, newRow, tabIndex, entity, indentSupported, collapsible
+            mainTable, newRow, tabIndex, entity, indentSupported, collapsible,
+            showIncludedViewOnSelect, supportIncludedViewOnSelect
         } = this.props;
 
         const {
@@ -684,8 +771,10 @@ class Table extends Component {
                         onDoubleClick={() => onDoubleClick &&
                             onDoubleClick(item[keyProperty])
                         }
-                        onMouseDown={(e) =>
-                            this.handleClick(e, item[keyProperty])
+                        onMouseDown={(e) => {
+                            this.handleClick(e, item[keyProperty]);
+                            supportIncludedViewOnSelect && showIncludedViewOnSelect(item.supportIncludedViews, item.includedView)
+                        }
                         }
                         handleRightClick={(e, fieldName) =>
                             this.handleRightClick(
@@ -700,6 +789,8 @@ class Table extends Component {
                         }
                         handleSelect={this.selectRangeProduct}
                         contextType={item.type}
+                        caption={item.caption ? item.caption:''}
+                        colspan={item.colspan}
                         notSaved={
                             item.saveStatus &&
                             !item.saveStatus.saved
@@ -880,6 +971,8 @@ class Table extends Component {
                         () => this.handleDelete() : ''
                     }
                     getAllLeafs={this.getAllLeafs}
+
+                    handleIndent = {this.handleShortcutIndent}
                 />
 
                 {!readonly &&

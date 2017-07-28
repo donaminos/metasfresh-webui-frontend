@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import {connect} from 'react-redux';
 
+import counterpart from 'counterpart';
+
 import {
     quickActionsRequest
 } from '../../actions/ListActions';
@@ -15,6 +17,7 @@ import QuickActionsDropdown from './QuickActionsDropdown';
 import keymap from '../../keymap.js';
 import QuickActionsContextShortcuts
     from '../shortcuts/QuickActionsContextShortcuts';
+import Tooltips from '../tooltips/Tooltips.js'
 import { ShortcutManager } from 'react-shortcuts';
 const shortcutManager = new ShortcutManager(keymap);
 
@@ -24,7 +27,9 @@ class QuickActions extends Component {
 
         this.state = {
             actions: [],
-            isDropdownOpen: false
+            isDropdownOpen: false,
+            isTooltip: false,
+            loading: false
         }
 
         const {fetchOnInit} = this.props;
@@ -45,8 +50,22 @@ class QuickActions extends Component {
     componentDidUpdate = (prevProps) => {
         const {
             selected, refresh, shouldNotUpdate, viewId, selectedWindowType,
-            windowType
+            windowType, inBackground, inModal
         } = this.props;
+
+        if (inModal === false && (prevProps.inModal === true)) {
+            // gained focus after sub-modal closed
+            this.setState({
+                loading: false
+            });
+        }
+
+        if (inBackground === true && (prevProps.inBackground === false)) {
+            // gained focus after modal closed
+            this.setState({
+                loading: false
+            });
+        }
 
         if(shouldNotUpdate){
             return;
@@ -80,7 +99,11 @@ class QuickActions extends Component {
             return;
         }
 
-        dispatch(
+        this.setState({
+            loading: true
+        });
+
+        let result = dispatch(
             openModal(
                 action.caption, action.processId, 'process', null, null, false,
                 viewId, selected
@@ -92,10 +115,21 @@ class QuickActions extends Component {
 
     fetchActions = () => {
         const {windowType, viewId, selected} = this.props;
+
+        this.mounted && this.setState({
+            loading: true
+        });
+
         quickActionsRequest(windowType, viewId, selected)
             .then(response => {
                 this.mounted && this.setState({
-                    actions: response.data.actions
+                    actions: response.data.actions,
+                    loading: false
+                })
+            })
+            .catch(() => {
+                this.mounted && this.setState({
+                    loading: false
                 })
             });
     }
@@ -106,14 +140,22 @@ class QuickActions extends Component {
         })
     }
 
+    toggleTooltip = (visible) => {
+        this.setState({
+            isTooltip: visible
+        })
+    }
+
     render() {
         const {
-            actions, isDropdownOpen
+            actions, isDropdownOpen, isTooltip, loading
         } = this.state;
 
         const {
             shouldNotUpdate, processStatus, disabled
         } = this.props;
+
+        const disabledDuringProcessing = (processStatus === 'pending') || loading;
 
         if(actions.length){
             return (
@@ -122,18 +164,25 @@ class QuickActions extends Component {
                         (disabled ? 'disabled ' : '')
                     }
                 >
-                    <span className="spacer-right">Actions:</span>
+                    <span className="spacer-right">
+                        {counterpart.translate('window.quickActions.caption')}:
+                    </span>
                     <div className="quick-actions-wrapper">
                         <div
                             className={
                                 'tag tag-success tag-xlg spacer-right ' +
                                 'quick-actions-tag ' +
-                                ((actions[0].disabled ||
-                                    processStatus === 'pending') ?
-                                        'tag-default ' : 'pointer '
+                                ((actions[0].disabled || disabledDuringProcessing) ?
+                                    'tag-default ' : 'pointer '
                                 )
                             }
-                            onClick={() => this.handleClick(actions[0])}
+                            onClick={(e) => {
+                                e.preventDefault();
+
+                                if (!disabledDuringProcessing) {
+                                    this.handleClick(actions[0])
+                                }
+                            }}
                             title={actions[0].caption}
                         >
                             {actions[0].caption}
@@ -141,12 +190,31 @@ class QuickActions extends Component {
                         <div
                             className={
                                 'btn-meta-outline-secondary btn-icon-sm ' +
-                                'btn-inline btn-icon pointer ' +
-                                (isDropdownOpen ? 'btn-disabled ' : '')
+                                'btn-inline btn-icon pointer tooltip-parent ' +
+                                ((isDropdownOpen || disabledDuringProcessing) ? 'btn-disabled ' : '')
                             }
-                            onClick={() => this.toggleDropdown(!isDropdownOpen)}
+                            onMouseEnter={() => this.toggleTooltip(true)}
+                            onMouseLeave={() => this.toggleTooltip(false)}
+                            onClick={
+                                () => {
+                                    if (!disabledDuringProcessing) {
+                                        this.toggleDropdown(!isDropdownOpen)
+                                    }
+                                }
+                            }
                         >
                             <i className="meta-icon-down-1" />
+                            {isTooltip &&
+                                <Tooltips
+                                    name={
+                                        keymap.QUICK_ACTIONS.QUICK_ACTION_TOGGLE
+                                    }
+                                    action={
+                                            'Toggle list'
+                                    }
+                                    type={''}
+                                />
+                            }
                         </div>
 
                         {isDropdownOpen &&
@@ -164,6 +232,7 @@ class QuickActions extends Component {
                         handleClick={() => shouldNotUpdate ?
                             null : this.handleClick(actions[0])
                         }
+                        onClick={() => this.toggleDropdown(!isDropdownOpen)}
                     />
                 </div>
             );

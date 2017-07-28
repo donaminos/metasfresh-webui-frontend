@@ -2,7 +2,8 @@
 @import './variables.css';
 @import './focus.css';
 
-
+@import './board.css';
+@import './charts.css';
 @import './charts.css';
 @import './daterangepicker.css';
 @import './datetime.css';
@@ -20,6 +21,7 @@
 @import './tag.css';
 @import './tooltip.css';
 @import './image.css';
+@import './email.css';
 
 /**
 *  IMPORTANT NOTE
@@ -443,7 +445,7 @@ body {
 }
 
 .document-list-included {
-    flex: .7;
+    flex: .5;
     margin-left: 3px;
 }
 
@@ -530,12 +532,7 @@ body {
 
 .column-wrapper {
     column-count: 2;
-}
-
-@media (max-width: $breakpoint) {
-    .column-wrapper {
-        column-count: 1;
-    }
+    column-fill: auto;
 }
 
 .font-weight-semibold {
@@ -896,12 +893,21 @@ td.pulse-off input {
     padding-top: 10px;
 }
 
+.dashboard-edit-mode {
+    width: 75%;
+}
+
 .dashboard-cards-wrapper {
     width: 100%;
     height: 100%;
 }
 
+.dashboard-cards {
+    height: 100%;
+}
+
 .dashboard-logo-wrapper {
+    width: 100%;
     justify-content: center;
 }
 
@@ -969,6 +975,10 @@ td.pulse-off input {
     padding: .3rem .3rem;
     cursor: default;
     color: $brand-color-secondary;
+}
+
+.quick-actions-item:focus {
+    background-color: $brand-selected-color;
 }
 
 .attributes-selector {
@@ -1183,6 +1193,11 @@ td.pulse-off input {
     height: 35px;
 }
 
+.avatar-sm {
+    width: 25px;
+    height: 25px;
+}
+
 .avatar-container {
     width: 100%;
     height: 100%;
@@ -1220,6 +1235,10 @@ td.pulse-off input {
     padding: 1rem .7rem;
 }
 
+.user-dropdown-item i {
+    margin-right: 5px;
+}
+
 .user-dropdown-item:not(.user-dropdown-header-item):hover,
 .user-dropdown-item:not(.user-dropdown-header-item):focus {
     background-color: $brand-color-primary;
@@ -1244,6 +1263,7 @@ td.pulse-off input {
     font-size: .9em;
     color: $brand-icon-off;
     padding: .3rem .2rem .2rem 0;
+    vertical-align: middle;
 }
 
 .btn-bookmark-icon.active {

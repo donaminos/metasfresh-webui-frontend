@@ -1,11 +1,17 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import {connect} from 'react-redux';
+import counterpart from 'counterpart';
 
 import Window from '../Window';
 import Process from '../Process';
 import Indicator from './Indicator';
 import OverlayField from './OverlayField';
+import keymap from '../../keymap.js';
+import ModalContextShortcuts from '../shortcuts/ModalContextShortcuts';
+import { ShortcutManager } from 'react-shortcuts';
+import Tooltips from '../tooltips/Tooltips.js'
+const shortcutManager = new ShortcutManager(keymap);
 
 import {
     closeModal,
@@ -34,7 +40,8 @@ class Modal extends Component {
             isNewDoc: dataId === 'NEW',
             init: false,
             pending: false,
-            waitingFetch: false
+            waitingFetch: false,
+            isTooltipShow: false
         }
     }
 
@@ -83,6 +90,16 @@ class Modal extends Component {
                 this.handleStart();
             })
         }
+    }
+
+    toggleTooltip = (key = null) => {
+        this.setState({
+            isTooltipShow: key
+        });
+    }
+
+    getChildContext = () => {
+        return { shortcuts: shortcutManager }
     }
 
     init = () => {
@@ -263,7 +280,7 @@ class Modal extends Component {
         } = this.props;
 
         const {
-            scrolled, pending, isNewDoc
+            scrolled, pending, isNewDoc, isTooltipShow
         } = this.state;
 
         return(
@@ -289,8 +306,19 @@ class Modal extends Component {
                             }
                             onClick={this.removeModal}
                             tabIndex={0}
+                            onMouseEnter={() =>
+                                this.toggleTooltip(keymap.MODAL_CONTEXT.CANCEL)
+                            }
+                            onMouseLeave={this.toggleTooltip}
                         >
-                            Cancel
+                            {counterpart.translate('modal.actions.cancel')}
+                            {isTooltipShow === keymap.MODAL_CONTEXT.CANCEL &&
+                                <Tooltips
+                                    name={keymap.MODAL_CONTEXT.CANCEL}
+                                    action={counterpart.translate('modal.actions.cancel')}
+                                    type={''}
+                                />
+                            }
                         </button>}
                         <button
                             className={
@@ -300,8 +328,25 @@ class Modal extends Component {
                             }
                             onClick={this.handleClose}
                             tabIndex={0}
+                            onMouseEnter={() =>
+                                this.toggleTooltip(modalType === 'process' ? keymap.MODAL_CONTEXT.CANCEL : keymap.MODAL_CONTEXT.APPLY)
+                            }
+                            onMouseLeave={this.toggleTooltip}
                         >
-                            {modalType === 'process' ? 'Cancel' : 'Done'}
+                            {modalType === 'process' ? 
+                                counterpart.translate('modal.actions.cancel') : 
+                                counterpart.translate('modal.actions.done')
+                            }
+                            {isTooltipShow === (modalType === 'process' ? keymap.MODAL_CONTEXT.CANCEL : keymap.MODAL_CONTEXT.APPLY) &&
+                                <Tooltips
+                                    name={modalType === 'process' ? keymap.MODAL_CONTEXT.CANCEL : keymap.MODAL_CONTEXT.APPLY}
+                                    action={modalType === 'process' ? 
+                                        counterpart.translate('modal.actions.cancel') : 
+                                        counterpart.translate('modal.actions.done')
+                                    }
+                                    type={''}
+                                />
+                            }
                         </button>
                         {modalType === 'process' &&
                             <button
@@ -312,8 +357,19 @@ class Modal extends Component {
                                 }
                                 onClick={this.handleStart}
                                 tabIndex={0}
+                                onMouseEnter={() =>
+                                    this.toggleTooltip(keymap.MODAL_CONTEXT.APPLY)
+                                }
+                                onMouseLeave={this.toggleTooltip}
                             >
-                                Start
+                                {counterpart.translate('modal.actions.start')}
+                                {isTooltipShow === keymap.MODAL_CONTEXT.APPLY &&
+                                    <Tooltips
+                                        name={keymap.MODAL_CONTEXT.APPLY}
+                                        action={counterpart.translate('modal.actions.start')}
+                                        type={''}
+                                    />
+                                }
                             </button>
                         }
                     </div>
@@ -328,6 +384,10 @@ class Modal extends Component {
                 >
                     {this.renderModalBody()}
                 </div>
+                <ModalContextShortcuts
+                    apply={modalType === 'process' ? this.handleStart : this.handleClose}
+                    cancel={modalType === 'process' ? this.handleClose : isNewDoc ? this.removeModal : ''}
+                />
             </div>
         </div>
         )
@@ -370,6 +430,10 @@ class Modal extends Component {
             </div>
         )
     }
+}
+
+Modal.childContextTypes = {
+    shortcuts: PropTypes.object.isRequired
 }
 
 Modal.propTypes = {

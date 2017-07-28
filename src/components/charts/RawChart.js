@@ -4,6 +4,7 @@ import {connect} from 'react-redux';
 import BarChart from './BarChartComponent';
 import PieChart from './PieChartComponent';
 import Indicator from './Indicator';
+import Loader from '../app/Loader';
 
 import {
     getKPIData,
@@ -15,34 +16,64 @@ class RawChart extends Component {
         super(props);
 
         this.state = {
-            chartData: [],
+            chartData: null,
             intervalId: null,
             err: null
         }
     }
 
-    componentDidMount(){
-        const { pollInterval } = this.props;
-
-        this.fetchData();
-
-        if (pollInterval){
-            this.setState({
-                intervalId: setInterval(() => {
-                    this.fetchData();
-                }, pollInterval * 1000)
-            })
+    componentDidUpdate(prevProps) {
+        if(
+            prevProps.isMaximized !== this.props.isMaximized ||
+            prevProps.index !== this.props.index ||
+            prevProps.id !== this.props.id
+        ) {
+            if(this.props.chartType === 'Indicator'){
+                if(this.props.noData) return;
+                this.fetchData();
+            }else{
+                this.mounted && this.setState({
+                    forceChartReRender: true,
+                }, () => {
+                    this.setState({
+                        forceChartReRender: false
+                    })
+                })
+            }
         }
+    }
+
+    componentDidMount(){
+        const { pollInterval, noData } = this.props;
+        this.mounted = true;
+
+        if(noData) return;
+        this.init();
     }
 
     componentWillUnmount(){
         const {intervalId} = this.state;
-
+        
+        this.mounted = false;
+        
         if (intervalId){
             clearInterval(intervalId);
 
-            this.setState({
+            this.mounted && this.setState({
                 intervalId: null
+            })
+        }
+    }
+    
+    init = () => {
+        const {pollInterval} = this.props;
+        this.fetchData();
+
+        if (pollInterval){
+            this.mounted && this.setState({
+                intervalId: setInterval(() => {
+                    this.fetchData();
+                }, pollInterval * 1000)
             })
         }
     }
@@ -67,9 +98,9 @@ class RawChart extends Component {
     fetchData(){
         this.getData()
             .then(chartData => {
-                this.setState({ chartData: chartData, err: null });
+                this.mounted && this.setState({ chartData: chartData, err: null });
             }).catch(err => {
-                this.setState({ err })
+                this.mounted && this.setState({ err })
             })
     }
 
@@ -84,10 +115,10 @@ class RawChart extends Component {
 
     renderChart() {
         const {
-            id, chartType, caption, fields, groupBy, reRender, height,
-            isMaximize, chartTitle
+            id, chartType, caption, fields, groupBy, height,
+            isMaximized, chartTitle, editmode, noData
         } = this.props;
-        const {chartData} = this.state;
+        const {chartData, forceChartReRender} = this.state;
         const data = chartData[0] && chartData[0].values;
 
         switch(chartType){
@@ -95,10 +126,11 @@ class RawChart extends Component {
                 return(
                     <BarChart
                         {...{
-                            data, groupBy, caption, chartType, height, reRender,
-                            fields, isMaximize, chartTitle
+                            data, groupBy, caption, chartType, height,
+                            fields, isMaximized, chartTitle, noData
                         }}
                         chartClass={'chart-' + id}
+                        reRender={forceChartReRender}
                         colors = {[
                             '#89d729', '#9aafbd', '#7688c9', '#c1ea8e',
                             '#c9d5dc', '#aab5e0', '#6aad18', '#298216',
@@ -109,10 +141,11 @@ class RawChart extends Component {
             case 'PieChart':
                 return(
                     <PieChart
-                        {...{data, fields, groupBy, height, reRender,
-                            isMaximize, chartTitle}}
+                        {...{data, fields, groupBy, height, noData,
+                            isMaximized, chartTitle}}
                         chartClass={'chart-' + id}
                         responsive={true}
+                        reRender={forceChartReRender}
                         colors = {[
                             '#89d729', '#9aafbd', '#7688c9', '#c1ea8e',
                             '#c9d5dc', '#aab5e0', '#6aad18', '#298216',
@@ -123,9 +156,9 @@ class RawChart extends Component {
             case 'Indicator':
                 return(
                     <Indicator
-                        value={data[0][fields[0].fieldName] +
-                            (fields[0].unit ? ' ' + fields[0].unit : '')}
-                        {...{caption}}
+                        value={noData ? '' : (data[0][fields[0].fieldName] +
+                            (fields[0].unit ? ' ' + fields[0].unit : ''))}
+                        {...{caption, editmode}}
                     />
                 );
             default:
@@ -133,14 +166,14 @@ class RawChart extends Component {
         }
     }
 
-    renderNoData() {
+    renderNoData(data) {
         const {chartType} = this.props;
 
         switch(chartType){
             case 'Indicator':
-                return <Indicator value="No data" />
+                return <Indicator value={'No data'} loader={data === null} />
             default:
-                return <div>No data</div>
+                return <div>{data === null ? <Loader /> : 'No data'}</div>
         }
     }
 
@@ -151,7 +184,7 @@ class RawChart extends Component {
             this.renderError() :
             (chartData && chartData.length > 0 ?
                 this.renderChart() :
-                this.renderNoData()
+                this.renderNoData(chartData)
             )
     }
 }

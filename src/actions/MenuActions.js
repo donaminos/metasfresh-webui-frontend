@@ -3,6 +3,9 @@ import axios from 'axios';
 
 // REQUESTS
 
+let breadcrumbsRequested = false;
+let breadcrumbsId = null;
+
 export function pathRequest(nodeId) {
     return axios.get(
         config.API_URL +
@@ -47,6 +50,12 @@ export function rootRequest(limit, depth = 0, onlyFavorites) {
         (onlyFavorites ? '&favorites=true' : '')
     );
 }
+export function breadcrumbRequest(nodeId) {
+    return axios.get(
+        config.API_URL +
+        '/menu/node/' + nodeId + '/breadcrumbMenu'
+    );
+}
 
 // END OF REQUESTS
 
@@ -72,33 +81,24 @@ export function getRootBreadcrumb() {
 
 export function getWindowBreadcrumb(id){
     return dispatch => {
-        elementPathRequest('window', id).then(response => {
-            let req = 0;
-            let pathData = flattenOneLine(response.data);
+        if (!breadcrumbsRequested && (breadcrumbsId !== id)) {
+            breadcrumbsRequested = true;
 
-            // promise to get all of the breadcrumb menu options
-            let breadcrumbProcess = new Promise((resolve) => {
+            elementPathRequest('window', id).then(response => {
+                let pathData = flattenOneLine(response.data);
+                return pathData;
+            }).then((item) => {
+                dispatch(setBreadcrumb(item.reverse()));
 
-                for(let i = 0; i < pathData.length; i++){
-                    const node = pathData[i];
+                breadcrumbsId = id;
+                breadcrumbsRequested = false;
+            }).catch(() => {
+                dispatch(setBreadcrumb([]));
 
-                    nodePathsRequest(node.nodeId, 10).then(item => {
-                        node.children = item.data;
-                        req += 1;
-
-                        if(req === pathData.length){
-                            resolve(pathData);
-                        }
-                    })
-                }
+                breadcrumbsId = null;
+                breadcrumbsRequested = false;
             });
-
-            return breadcrumbProcess;
-        }).then((item) => {
-            dispatch(setBreadcrumb(item.reverse()));
-        }).catch(() => {
-            dispatch(setBreadcrumb([]));
-        });
+        }
     }
 }
 
@@ -137,7 +137,8 @@ export function flattenOneLine(node) {
     }
     result.push({
         nodeId: node.nodeId,
-        caption: node.caption
+        caption: node.caption,
+        type: node.type
     });
     return result;
 }
