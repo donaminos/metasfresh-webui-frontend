@@ -18,7 +18,8 @@ import Prompt from '../app/Prompt';
 import NewEmail from '../email/NewEmail';
 
 import {
-    openModal
+    openModal,
+    closeModal
 } from '../../actions/WindowActions';
 
 import {
@@ -170,6 +171,14 @@ class Header extends Component {
         ));
     }
 
+    openModalRow = (windowType, type, caption, tabId, rowId) => {
+        const { dispatch } = this.props;
+
+        dispatch(openModal(
+            caption, windowType, type, tabId, rowId
+        ));
+    }
+
     handlePrint = (windowType, docId, docNo) => {
         openFile(
             'window', windowType, docId, 'print',
@@ -280,7 +289,7 @@ class Header extends Component {
             docStatusData, windowType, dataId, breadcrumb, showSidelist,
             inbox, selected, entity, query, showIndicator, isDocumentNotSaved,
             selectedWindowType, notfound, docId, me, editmode,
-            handleEditModeToggle
+            handleEditModeToggle, activeTab
         } = this.props;
 
         const {
@@ -547,6 +556,7 @@ class Header extends Component {
                     closeSubheader={() => this.closeOverlays('isSubheaderShow')}
                     docNo={docNoData && docNoData.value}
                     openModal={this.openModal}
+                    openModalRow={this.openModalRow}
                     handlePrint={this.handlePrint}
                     handleDelete={this.handleDelete}
                     handleEmail={this.handleEmail}
@@ -554,7 +564,7 @@ class Header extends Component {
                     disableOnClickOutside={!isSubheaderShow}
                     {...{breadcrumb, notfound, query, entity,
                         selectedWindowType, selected, dataId, windowType,
-                        siteName, editmode, handleEditModeToggle
+                        siteName, editmode, handleEditModeToggle, activeTab
                     }}
                 />}
 

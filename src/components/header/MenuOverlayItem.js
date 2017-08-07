@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import {connect} from 'react-redux';
 
 import {
-    getWindowBreadcrumb
+    getElementBreadcrumb
 } from '../../actions/MenuActions';
 
 import BookmarkButton from './BookmarkButton';
@@ -39,7 +39,7 @@ class MenuOverlayItem extends Component {
     handleClick = (elementId, entity) => {
         const {handleRedirect} = this.props;
         handleRedirect(elementId, null, entity);
-        this.renderBreadcrumb(elementId)
+        this.renderBreadcrumb(entity, elementId)
     }
 
     handleKeyDown = (e) => {
@@ -53,7 +53,7 @@ class MenuOverlayItem extends Component {
                 break;
             case 'ArrowUp':
                 e.preventDefault();
-                this.handeArrowUp();
+                this.handleArrowUp();
                 break;
             case 'Tab':
                 e.preventDefault();
@@ -75,7 +75,7 @@ class MenuOverlayItem extends Component {
         }
     }
 
-    handeArrowUp() {
+    handleArrowUp() {
         let prevSiblings = document.activeElement.previousSibling;
         if(prevSiblings && prevSiblings.classList.contains('input-primary')) {
             document.getElementById('search-input-query').focus();
@@ -124,15 +124,17 @@ class MenuOverlayItem extends Component {
 
             } else if(parentElem.parentElement.parentElement.nextSibling) {
                 parentElem.parentElement.parentElement.nextSibling
+                .getElementsByClassName('js-menu-item')[0] &&
+                parentElem.parentElement.parentElement.nextSibling
                 .getElementsByClassName('js-menu-item')[0].focus();
             }
         }
     }
 
-    renderBreadcrumb = (elementId) => {
+    renderBreadcrumb = (entity, elementId) => {
         const {dispatch} = this.props;
 
-        dispatch(getWindowBreadcrumb(elementId));
+        dispatch(getElementBreadcrumb(entity, elementId));
     }
 
     render() {

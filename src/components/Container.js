@@ -22,7 +22,7 @@ class Container extends Component {
             handleDeletedStatus, dropzoneFocused, notfound, rawModal, modal,
             selected, selectedWindowType, indicator, modalTitle, setModalTitle,
             includedView, closeModalCallback, setModalDescription,
-            modalDescription, editmode, handleEditModeToggle
+            modalDescription, editmode, handleEditModeToggle, activeTab
         } = this.props;
 
         return (
@@ -35,7 +35,7 @@ class Container extends Component {
                             showIndicator, query, siteName, showSidelist,
                             attachments, actions, references, windowType,
                             breadcrumb, dataId, dropzoneFocused, notfound,
-                            docId, editmode, handleEditModeToggle
+                            docId, editmode, handleEditModeToggle, activeTab
                         }}
                         docStatus = {docActionElem}
                     />
@@ -86,7 +86,6 @@ class Container extends Component {
                      {rawModal.visible &&
                          <RawModal
                              modalTitle={modalTitle}
-                             modalDescription={this.modalDescription}
                              modalDescription={modalDescription}
                              windowType={rawModal.type}
                              viewId={rawModal.viewId}
@@ -100,7 +99,7 @@ class Container extends Component {
                                      selectedWindowType={selectedWindowType}
                                      setModalTitle={setModalTitle}
                                      setModalDescription={setModalDescription}
-                                     fetchQuickActionsOnInit={true}
+                                     fetchQuickActionsOnInit={!(includedView.windowType && includedView.viewId)}
                                      modalDescription={this.modalDescription}
                                      isModal={true}
                                      processStatus={processStatus}
@@ -112,19 +111,21 @@ class Container extends Component {
                                      inModal={modal.visible}
                                  >
                                  </DocumentList>
-                                 {includedView.windowType &&
-                                     includedView.viewId &&
+                                 {includedView.windowType && includedView.viewId && (
                                      <DocumentList
                                          type="includedView"
                                          selected={selected}
                                          selectedWindowType={selectedWindowType}
                                          windowType={includedView.windowType}
                                          defaultViewId={includedView.viewId}
+                                         fetchQuickActionsOnInit={true}
+                                         isModal={true}
                                          isIncluded={true}
                                          processStatus={processStatus}
+                                         inBackground={false}
                                          inModal={modal.visible}
                                      />
-                                 }
+                                 )}
                             </div>
                          </RawModal>
                      }

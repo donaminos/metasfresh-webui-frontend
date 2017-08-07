@@ -25,7 +25,9 @@ class Subheader extends Component {
     componentDidMount() {
         document.getElementsByClassName('js-subheader-column')[0].focus();
 
-        elementPathRequest('window', this.props.windowType).then(response => {
+        const entity = (this.props.entity === 'board') ? 'board' : 'window';
+
+        elementPathRequest(entity, this.props.windowType).then(response => {
             this.setState({
                 elementPath: response.data
             });
@@ -188,8 +190,12 @@ class Subheader extends Component {
             </div>
         ]
 
-        const currentNode = elementPath &&
-                elementPath.children[elementPath.children.length-1];
+        let currentNode = elementPath;
+        if (currentNode && currentNode.children) {
+            do {
+                currentNode = currentNode.children[currentNode.children.length - 1];
+            } while (currentNode && currentNode.children && (currentNode.type !== 'window'));
+        }
 
         return (
             <div
@@ -252,16 +258,22 @@ class Subheader extends Component {
     renderActionsColumn = () => {
         const {
             windowType, dataId, selected, selectedWindowType, entity, query,
-            openModal, closeSubheader, notfound
+            openModal, openModalRow, closeSubheader, notfound, activeTab
         } = this.props;
 
         return (
             <Actions
-                {...{windowType, entity, openModal, closeSubheader, notfound}}
+                key={1}
+                {...{
+                    windowType, entity, openModal, openModalRow, closeSubheader, notfound
+                }}
                 docId={dataId ? dataId : query && query.viewId}
                 rowId={selectedWindowType === windowType ? selected : []}
+                activeTab={activeTab}
+                activeTabSelected={(activeTab && selected && (selected.length === 1)) ? selected: []}
             />
-        )
+        );
+
     }
 
     render() {
