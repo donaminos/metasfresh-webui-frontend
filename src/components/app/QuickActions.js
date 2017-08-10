@@ -34,8 +34,8 @@ class QuickActions extends Component {
 
         const {fetchOnInit} = this.props;
 
-        if(fetchOnInit){
-            this.fetchActions();
+        if (fetchOnInit) {
+            this.fetchActions(props.windowType, props.viewId, props.selected);
         }
     }
 
@@ -47,18 +47,43 @@ class QuickActions extends Component {
         this.mounted = false;
     }
 
-    componentDidUpdate = (prevProps) => {
+    componentWillReceiveProps = (nextProps) => {
         const {
-            selected, refresh, shouldNotUpdate, viewId, selectedWindowType,
-            windowType, inBackground
+            selected, viewId, windowType
         } = this.props;
 
-        if(shouldNotUpdate){
+        if (nextProps.selectedWindowType && (nextProps.selectedWindowType !== nextProps.windowType)) {
             return;
         }
 
-        if(selectedWindowType && (selectedWindowType !== windowType)){
-            return;
+        if (
+            (nextProps.selected && (JSON.stringify(nextProps.selected) !== JSON.stringify(selected))) ||
+            (nextProps.viewId && (nextProps.viewId !== viewId)) ||
+            (nextProps.windowType && (nextProps.windowType !== windowType))
+        ) {
+            this.fetchActions(nextProps.windowType, nextProps.viewId, nextProps.selected);
+        }
+    }
+
+    shouldComponentUpdate(nextProps) {
+        return (nextProps.shouldNotUpdate !== true);
+    }
+
+    updateActions = () => {
+        const { windowType, viewId, selected } = this.props;
+        this.fetchActions(windowType, viewId, selected);
+    }
+
+    componentDidUpdate = (prevProps) => {
+        const {
+            inBackground, inModal
+        } = this.props;
+
+        if (inModal === false && (prevProps.inModal === true)) {
+            // gained focus after sub-modal closed
+            this.setState({
+                loading: false
+            });
         }
 
         if (inBackground === true && (prevProps.inBackground === false)) {
@@ -66,14 +91,6 @@ class QuickActions extends Component {
             this.setState({
                 loading: false
             });
-        }
-
-        if(
-            (JSON.stringify(prevProps.selected) !== JSON.stringify(selected)) ||
-            (JSON.stringify(prevProps.refresh) !== JSON.stringify(refresh)) ||
-            (JSON.stringify(prevProps.viewId) !== JSON.stringify(viewId))
-        ){
-            this.fetchActions();
         }
     }
 
@@ -96,7 +113,7 @@ class QuickActions extends Component {
             loading: true
         });
 
-        let result = dispatch(
+        dispatch(
             openModal(
                 action.caption, action.processId, 'process', null, null, false,
                 viewId, selected
@@ -106,25 +123,32 @@ class QuickActions extends Component {
         this.toggleDropdown();
     }
 
-    fetchActions = () => {
-        const {windowType, viewId, selected} = this.props;
-
-        this.mounted && this.setState({
+    fetchActions = (windowType, viewId, selected) => {
+/*
+        this.setState({
             loading: true
         });
+*/
 
-        quickActionsRequest(windowType, viewId, selected)
-            .then(response => {
-                this.mounted && this.setState({
-                    actions: response.data.actions,
-                    loading: false
+        if (windowType && viewId && selected) {
+            quickActionsRequest(windowType, viewId, selected)
+                .then(response => {
+                    this.setState({
+                        actions: response.data.actions,
+                        loading: false
+                    })
                 })
-            })
-            .catch(() => {
-                this.mounted && this.setState({
-                    loading: false
-                })
+                .catch(() => {
+                    this.setState({
+                        loading: false
+                    })
+                });
+        }
+        else {
+            this.setState({
+                loading: false
             });
+        }
     }
 
     toggleDropdown = (option) => {
@@ -141,14 +165,14 @@ class QuickActions extends Component {
 
     render() {
         const {
-            actions, isDropdownOpen, isTooltip
+            actions, isDropdownOpen, isTooltip, loading
         } = this.state;
 
         const {
             shouldNotUpdate, processStatus, disabled
         } = this.props;
 
-        const disabledDuringProcessing = (processStatus === "pending") || this.state.loading;
+        const disabledDuringProcessing = (processStatus === 'pending') || loading;
 
         if(actions.length){
             return (
@@ -172,9 +196,7 @@ class QuickActions extends Component {
                             onClick={(e) => {
                                 e.preventDefault();
 
-                                if (!disabledDuringProcessing) {
-                                    this.handleClick(actions[0])
-                                }
+                                this.handleClick(actions[0])
                             }}
                             title={actions[0].caption}
                         >
@@ -190,9 +212,7 @@ class QuickActions extends Component {
                             onMouseLeave={() => this.toggleTooltip(false)}
                             onClick={
                                 () => {
-                                    if (!disabledDuringProcessing) {
-                                        this.toggleDropdown(!isDropdownOpen)
-                                    }
+                                    this.toggleDropdown(!isDropdownOpen)
                                 }
                             }
                         >
@@ -243,6 +263,6 @@ QuickActions.propTypes = {
     dispatch: PropTypes.func.isRequired
 };
 
-QuickActions = connect()(QuickActions)
+QuickActions = connect(false, false, false, { withRef: true })(QuickActions)
 
 export default QuickActions;

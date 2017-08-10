@@ -56,7 +56,7 @@ class UserDropdown extends Component {
         return (
             <div
                 className={
-                    'header-item-container header-item-container-static ' +
+                    'header-item-container ' +
                     'pointer user-dropdown-container tooltip-parent ' +
                     (open ? 'header-item-open ' : '')
                 }
@@ -97,7 +97,8 @@ class UserDropdown extends Component {
                                     me.userProfileWindowId +
                                     '/' + me.userProfileId
                                 );
-                                handleUDOpen(false)}}
+                                handleUDOpen(false);
+                                toggleTooltip('')}}
                             tabIndex={0}
                         >
                             <i className="meta-icon-settings" />

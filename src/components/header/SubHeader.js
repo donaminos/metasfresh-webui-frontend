@@ -4,7 +4,7 @@ import {connect} from 'react-redux';
 import onClickOutside from 'react-onclickoutside';
 import counterpart from 'counterpart';
 
-import {updateBreadcrumb} from '../../actions/MenuActions';
+import {updateBreadcrumb, elementPathRequest} from '../../actions/MenuActions';
 
 import Actions from './Actions';
 
@@ -17,12 +17,21 @@ class Subheader extends Component {
         super(props);
 
         this.state = {
-            pdfSrc: null
+            pdfSrc: null,
+            elementPath: ''
         }
     }
 
     componentDidMount() {
         document.getElementsByClassName('js-subheader-column')[0].focus();
+
+        const entity = (this.props.entity === 'board') ? 'board' : 'window';
+
+        elementPathRequest(entity, this.props.windowType).then(response => {
+            this.setState({
+                elementPath: response.data
+            });
+        });
     }
 
     handleKeyDown = (e) => {
@@ -121,6 +130,10 @@ class Subheader extends Component {
             handleEditModeToggle, handleEmail
         } = this.props;
 
+        const {
+            elementPath
+        } = this.state;
+
         const docLinks = dataId && [
             <div
                 key={0}
@@ -177,9 +190,12 @@ class Subheader extends Component {
             </div>
         ]
 
-        const currentNode = breadcrumb &&
-            breadcrumb[breadcrumb.length - 1] &&
-            breadcrumb[breadcrumb.length - 1].children;
+        let currentNode = elementPath;
+        if (currentNode && currentNode.children) {
+            do {
+                currentNode = currentNode.children[currentNode.children.length - 1];
+            } while (currentNode && currentNode.children && (currentNode.type !== 'window'));
+        }
 
         return (
             <div
@@ -195,8 +211,12 @@ class Subheader extends Component {
                         transparentBookmarks={!!siteName}
                         updateData={this.handleUpdateBreadcrumb}
                     >
-                        <span className="subheader-title">
-                            {currentNode ? currentNode.caption : siteName}
+                        <span 
+                            title={
+                                currentNode ? currentNode.caption : siteName
+                            }
+                            className="subheader-title">
+                                {currentNode ? currentNode.caption : siteName}
                         </span>
                     </BookmarkButton>
                 </div>
@@ -238,16 +258,22 @@ class Subheader extends Component {
     renderActionsColumn = () => {
         const {
             windowType, dataId, selected, selectedWindowType, entity, query,
-            openModal, closeSubheader, notfound
+            openModal, openModalRow, closeSubheader, notfound, activeTab
         } = this.props;
 
         return (
             <Actions
-                {...{windowType, entity, openModal, closeSubheader, notfound}}
+                key={1}
+                {...{
+                    windowType, entity, openModal, openModalRow, closeSubheader, notfound
+                }}
                 docId={dataId ? dataId : query && query.viewId}
                 rowId={selectedWindowType === windowType ? selected : []}
+                activeTab={activeTab}
+                activeTabSelected={(activeTab && selected && (selected.length === 1)) ? selected: []}
             />
-        )
+        );
+
     }
 
     render() {

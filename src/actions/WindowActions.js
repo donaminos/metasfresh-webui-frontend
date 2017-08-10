@@ -18,6 +18,7 @@ import {
 
 import {
     addNotification,
+    setNotificationProgress,
     setProcessSaved,
     setProcessPending
 } from './AppActions';
@@ -169,6 +170,13 @@ export function deleteRow(tabid, rowid, scope) {
         tabid: tabid,
         rowid: rowid,
         scope: scope
+    }
+}
+
+export function selectRow(selected) {
+    return {
+        type: types.SELECT_ROW,
+        selected
     }
 }
 
@@ -428,6 +436,20 @@ export function patch(
     }
 }
 
+export function fireUpdateData(entity, windowType, id, tabId, rowId, isModal,
+    isAdvanced){
+
+        return dispatch => {
+            getData(
+                entity, windowType, id, tabId, rowId, null, null, isAdvanced
+            ).then(response => {
+                dispatch(mapDataToState(
+                    response.data, isModal, rowId, id, windowType, isAdvanced
+                ));
+            });
+        }
+}
+
 function updateData(doc, scope){
     return dispatch => {
         Object.keys(doc).map(key => {
@@ -554,22 +576,36 @@ export function updatePropertyValue(property, value, tabid, rowid, isModal) {
     }
 }
 
+function handleUploadProgress(dispatch, notificationTitle, progressEvent) {
+    let percentLeft = Math.min(Math.floor((progressEvent.loaded * 100) / progressEvent.total), 98);
+
+    dispatch(setNotificationProgress(notificationTitle, percentLeft));
+}
+
 export function attachFileAction(windowType, docId, data){
-    return dispatch => {
+    return (dispatch) => {
+        const notificationTitle = 'Attachment';
+
         dispatch(addNotification(
-            'Attachment', 'Uploading attachment', 5000, 'primary'
+            notificationTitle, 'Uploading attachment', 0, 'primary'
         ));
 
+        let requestConfig = {
+            onUploadProgress: handleUploadProgress.bind(this, dispatch, notificationTitle)
+        };
+
         return axios.post(
-            `${config.API_URL}/window/${windowType}/${docId}/attachments`, data
+            `${config.API_URL}/window/${windowType}/${docId}/attachments`, data, requestConfig
         ).then(() => {
+            dispatch(setNotificationProgress(notificationTitle, 100));
+
             dispatch(addNotification(
-                'Attachment', 'Uploading attachment succeeded.', 5000, 'primary'
+                notificationTitle, 'Uploading attachment succeeded.', 5000, 'primary'
             ))
         })
         .catch(() => {
             dispatch(addNotification(
-                'Attachment', 'Uploading attachment error.', 5000, 'error'
+                notificationTitle, 'Uploading attachment error.', 5000, 'error'
             ))
         })
     }
@@ -599,32 +635,35 @@ export function createProcess(processType, viewId, type, ids, tabId, rowId) {
 
         return getProcessData(
             processType, viewId, type, ids, tabId, rowId
-        ).then(response => {
-            const preparedData = parseToDisplay(response.data.fieldsByName);
+        ).then( (response) => {
+            if (response.data) {
+                const preparedData = parseToDisplay(response.data.fieldsByName);
 
-            pid = response.data.pinstanceId;
+                pid = response.data.pinstanceId;
 
-            if (Object.keys(preparedData).length === 0) {
-                startProcess(processType, pid).then(response => {
-                    dispatch(setProcessSaved());
-                    dispatch(handleProcessResponse(response, processType, pid));
-                }).catch(err => {
-                    dispatch(setProcessSaved());
-                    throw err;
-                });
-                throw new Error('close_modal');
-            }else{
-                dispatch(initDataSuccess(preparedData, 'modal'));
-                initLayout('process', processType).then(response => {
-                    const preparedLayout = Object.assign({}, response.data, {
-                        pinstanceId: pid
-                    })
-                    dispatch(setProcessSaved());
-                    return dispatch(initLayoutSuccess(preparedLayout, 'modal'))
-                }).catch(err => {
-                    dispatch(setProcessSaved());
-                    throw err;
-                });
+                if (Object.keys(preparedData).length === 0) {
+                    startProcess(processType, pid).then(response => {
+                        dispatch(handleProcessResponse(response, processType, pid));
+                    }).catch(err => {
+                        dispatch(setProcessSaved());
+                        throw err;
+                    });
+                }
+                else {
+                    dispatch(initDataSuccess(preparedData, 'modal'));
+                    initLayout('process', processType).then(response => {
+                        dispatch(setProcessSaved());
+
+                        const preparedLayout = Object.assign({}, response.data, {
+                            pinstanceId: pid
+                        });
+
+                        return dispatch(initLayoutSuccess(preparedLayout, 'modal'))
+                    }).catch(err => {
+                        dispatch(setProcessSaved());
+                        throw err;
+                    });
+                }
             }
         }).catch(err => {
             dispatch(setProcessSaved());
@@ -641,7 +680,9 @@ export function handleProcessResponse(response, type, id, successCallback) {
 
         if(error){
             dispatch(addNotification('Process error', summary, 5000, 'error'));
-        }else{
+            dispatch(setProcessSaved());
+        }
+        else {
             if(action){
                 switch(action.type){
                     case 'openView':
@@ -651,6 +692,9 @@ export function handleProcessResponse(response, type, id, successCallback) {
                         openFile(
                             'process', type, id, 'print', action.filename
                         );
+
+                        dispatch(closeModal());
+
                         break;
                     case 'openDocument':
                         if(action.modal) {
@@ -687,6 +731,8 @@ export function handleProcessResponse(response, type, id, successCallback) {
             if(summary){
                 dispatch(addNotification('Process', summary, 5000, 'primary'))
             }
+
+            dispatch(setProcessSaved());
 
             successCallback && successCallback();
         }

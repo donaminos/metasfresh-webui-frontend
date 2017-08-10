@@ -80,6 +80,16 @@ class DocList extends Component {
             modalTitle, notfound, modalDescription
         } = this.state;
 
+        let refRowIds = [];
+        if (query && query.refRowIds) {
+            try {
+                refRowIds = JSON.parse(query.refRowIds);
+            }
+            catch (e) {
+                refRowIds = [];
+            }
+        }
+
         return (
             <Container
                 entity="documentView"
@@ -100,9 +110,12 @@ class DocList extends Component {
                      defaultPage={parseInt(query.page)}
                      refType={query.refType}
                      refId={query.refId}
+                     refTabId={query.refTabId}
+                     refRowIds={refRowIds}
                      selectedWindowType={selectedWindowType}
                      selected={selected}
                      inBackground={rawModal.visible}
+                     inModal={modal.visible}
                      fetchQuickActionsOnInit={true}
                      processStatus={processStatus}
                      disablePaginationShortcuts=

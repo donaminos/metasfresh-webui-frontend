@@ -14,16 +14,15 @@ class Lookup extends Component {
     constructor(props) {
         super(props);
 
-        const {properties} = this.props;
-
         this.state = {
             isInputEmpty: true,
-            propertiesCopy: getItemsByProperty(properties, 'source', 'list'),
+            propertiesCopy: getItemsByProperty(this.props.properties, 'source', 'list'),
             property: '',
             fireClickOutside: false,
             initialFocus: false,
             localClearing: false,
-            fireDropdownList: false
+            fireDropdownList: false,
+            autofocusDisabled: false
         }
     }
 
@@ -31,51 +30,64 @@ class Lookup extends Component {
         this.checkIfDefaultValue();
     }
 
-    handleClickOutside = () => {
-        this.setState({
-            fireClickOutside: true,
-            property: ''
-        }, () => {
-            this.setState({
-                fireClickOutside: false
-            })
-        })
-    }
-
-    handleInputEmptyStatus = (isEmpty) => {
-        this.setState({
-            isInputEmpty: isEmpty
-        })
-    }
-
-    setNextProperty = (prop)=> {
-        const {defaultValue, properties} = this.props;
-
-        defaultValue.map((item, index)=>{
-            const nextIndex = index+1;
-            if(nextIndex<defaultValue.length &&
-                defaultValue[index].field === prop){
-                this.setState({
-                    property: properties[nextIndex].field
-                })
-                return;
-            } else if(defaultValue[defaultValue.length-1].field === prop){
-                this.setState({
-                    property: ''
-                })
-            }
-        })
-    }
-
     checkIfDefaultValue = () => {
-        const {defaultValue} = this.props;
-        defaultValue.map(item => {
-            if(item.value){
-                this.setState({
-                    isInputEmpty: false
-                })
-            }
-        });
+        const { defaultValue } = this.props;
+
+        if (defaultValue) {
+            defaultValue.map( (item) => {
+                if (item.value) {
+                    this.setState({
+                        isInputEmpty: false
+                    });
+                }
+            });
+        }
+    }
+
+    setNextProperty = (prop) => {
+        const { defaultValue, properties, onBlurWidget } = this.props;
+
+        if (defaultValue) {
+            defaultValue.map( (item, index) => {
+                const nextIndex = index + 1;
+
+                const propValue = properties[index];
+                if ((propValue.field === prop) && (propValue.source === 'lookup') && this.linkedList) {
+                    this.linkedList.map( (listComponent, listIndex) => {
+                        if (listComponent && listComponent.requestListData) {
+                            listComponent.requestListData(true, !listIndex);
+                        }
+                    });
+                }
+
+                if ((nextIndex < defaultValue.length) && (defaultValue[index].field === prop)) {
+                    let nextProp = properties[nextIndex];
+
+                    if (nextProp.source === 'list') {
+                        this.linkedList.map( (listComponent) => {
+                            if (listComponent && listComponent.props && (propValue.source !== 'lookup')) {
+                                let listProp = listComponent.props.mainProperty;
+
+                                if (listProp && (listProp[0].field === nextProp.field) && listComponent.activate) {
+                                    listComponent.activate();
+                                }
+                            }
+                        });
+                    } else {
+                        this.setState({
+                            property: nextProp.field
+                        });
+                    }
+                }
+                else if (defaultValue[defaultValue.length - 1].field === prop) {
+                    this.setState({
+                        property: ''
+                    }, () => {
+                        onBlurWidget && onBlurWidget();
+                    });
+                }
+            });
+        }
     }
 
     openDropdownList = () => {
@@ -85,23 +97,57 @@ class Lookup extends Component {
             this.setState({
                 fireDropdownList: false
             })
-        })
+        });
     }
 
     resetLocalClearing = () => {
         this.setState({
             localClearing: false
-        })
+        });
+    }
+
+    handleClickOutside = () => {
+        this.setState({
+            fireClickOutside: true,
+            property: ''
+        }, () => {
+            this.setState({
+                fireClickOutside: false
+            });
+        });
+    }
+
+    handleInputEmptyStatus = (isEmpty) => {
+        this.setState({
+            isInputEmpty: isEmpty
+        });
     }
 
     handleClear = () => {
-        const {onChange, properties} = this.props;
-        onChange(properties, null, false);
+        const { onChange, properties } = this.props;
+
+        if (onChange) {
+            onChange(properties, null, false);
+        }
+
         this.setState({
             isInputEmpty: true,
             property: '',
             initialFocus: true,
-            localClearing: true
+            localClearing: true,
+            autofocusDisabled: false
+        });
+    }
+
+    disableAutofocus= () => {
+        this.setState({
+            autofocusDisabled: true
+        });
+    }
+
+    enableAutofocus = () => {
+        this.setState({
+            autofocusDisabled: false
         });
     }
 
@@ -116,114 +162,114 @@ class Lookup extends Component {
 
         const {
             isInputEmpty, property, fireClickOutside, initialFocus,
-            localClearing, fireDropdownList
+            localClearing, fireDropdownList, autofocusDisabled
         } = this.state;
+
+        this.linkedList = [];
 
         return (
             <div
-                ref={(c) => this.dropdown = c}
+                ref={ (c) => this.dropdown = c }
                 className={
-                    'input-dropdown-container lookup-wrapper input-' +
-                    (rank ? rank : 'primary') +
-                    (updated ? ' pulse-on' : ' pulse-off') +
-                    (filterWidget ? ' input-full' : '') +
+                    'input-dropdown-container lookup-wrapper input-' + (rank ? rank : 'primary') +
+                    (updated ? ' pulse-on' : ' pulse-off') + (filterWidget ? ' input-full' : '') +
                     (mandatory && (isInputEmpty ||
                         (validStatus && validStatus.initialValue &&
                         !validStatus.valid)) ?
-                        ' input-mandatory ' : '') +
+                        ' input-mandatory' : '') +
                     ((validStatus &&
                         (
                             (!validStatus.valid && !validStatus.initialValue)
                         )
-                    ) ? ' input-error ' : '')
+                    ) ? ' input-error' : '') +
+                    (readonly ? ' lookup-wrapper-disabled' : '')
                 }
             >
 
-            {
-                properties && properties.map((item, index) => {
-                        const disabled = isInputEmpty && index != 0;
-                        if(item.source === 'lookup' ||
-                            item.widgetType === 'Lookup'){
-                            return <RawLookup
+                {properties && properties.map( (item, index) => {
+                    const disabled = isInputEmpty && (index !== 0);
+                    const itemByProperty = getItemsByProperty(defaultValue, 'field', item.field)[0];
+
+                    if ((item.source === 'lookup') || (item.widgetType === 'Lookup')) {
+                        return (
+                            <RawLookup
                                 key={index}
-                                defaultValue={
-                                    getItemsByProperty(defaultValue,
-                                            'field', item.field)[0].value
-                                }
+                                defaultValue={itemByProperty.value}
+                                initialFocus={(index === 0) ? initialFocus : false}
                                 mainProperty={[item]}
-                                handleInputEmptyStatus={
-                                    this.handleInputEmptyStatus
-                                }
                                 resetLocalClearing={this.resetLocalClearing}
-                                initialFocus={index===0 ? initialFocus : false}
                                 setNextProperty={this.setNextProperty}
                                 lookupEmpty={isInputEmpty}
                                 fireDropdownList={fireDropdownList}
-                                {...{placeholder, readonly, tabIndex,
-                                windowType, parameterName, entity, dataId,
-                                isModal, recent, rank, updated, filterWidget,
-                                mandatory, validStatus, align, onChange, item,
-                                disabled, fireClickOutside, viewId, subentity,
-                                subentityId, autoFocus, tabId, rowId,
-                                newRecordCaption, newRecordWindowId,
-                                localClearing}}
+                                handleInputEmptyStatus={this.handleInputEmptyStatus}
+                                enableAutofocus={this.enableAutofocus}
+                                {...{
+                                    placeholder, readonly, tabIndex,
+                                    windowType, parameterName, entity, dataId,
+                                    isModal, recent, rank, updated, filterWidget,
+                                    mandatory, validStatus, align, onChange, item,
+                                    disabled, fireClickOutside, viewId, subentity,
+                                    subentityId, autoFocus, tabId, rowId,
+                                    newRecordCaption, newRecordWindowId,
+                                    localClearing
+                                }}
                             />
+                        )
 
-                        } else if (item.source === 'list') {
+                    } else if (item.source === 'list') {
 
-                            const objectValue = getItemsByProperty(
-                                defaultValue, 'field', item.field
-                            )[0].value;
+                        const isFirstProperty = (index === 0);
+                        const isCurrentProperty = (item.field === property) && !autofocusDisabled;
 
-                            return <div
+                        return (
+                            <div
+                                key={index}
                                 className={
-                                    'raw-lookup-wrapper ' +
-                                    'raw-lookup-wrapper-bcg ' +
-                                    (disabled ? 'raw-lookup-disabled':'')
-                                    }
-                                key={index}>
-                                    <List
-                                        {...{dataId, entity, windowType,
-                                            filterWidget, tabId, rowId,
-                                            subentity, subentityId, viewId,
-                                            onChange, isInputEmpty, property
-                                        }}
-                                        properties={[item]}
-                                        lookupList={true}
-                                        autofocus={
-                                            item.field == property ?
-                                            true : false
+                                    'raw-lookup-wrapper raw-lookup-wrapper-bcg ' +
+                                    (disabled || readonly ? 'raw-lookup-disabled' : '')
+                                }
+                            >
+                                <List
+                                    ref={ (c) => {
+                                        if (c) {
+                                            this.linkedList.push(c.getWrappedInstance());
                                         }
-                                        defaultValue={
-                                            objectValue ?
-                                            objectValue : ''
-                                        }
-                                        initialFocus={
-                                            index===0 ? initialFocus : false
-                                        }
-                                        setNextProperty={this.setNextProperty}
-                                        mainProperty={[item]}
-                                        blur={!property?true:false}
-                                        readonly={disabled || readonly}
-                                    />
-                                </div>
-                        }
-                })
-            }
-            {isInputEmpty ?
-                <div
-                    className="input-icon input-icon-lg raw-lookup-wrapper"
-                    onClick={this.openDropdownList}
-                >
-                    <i className="meta-icon-preview" />
-                </div> :
-                <div className="input-icon input-icon-lg raw-lookup-wrapper">
-                    {!readonly && <i
-                        onClick={this.handleClear}
-                        className="meta-icon-close-alt"
-                    />}
-                </div>
-            }
+                                    }}
+                                    readonly={disabled || readonly}
+                                    lookupList={true}
+                                    autofocus={isCurrentProperty}
+                                    properties={[item]}
+                                    mainProperty={[item]}
+                                    defaultValue={itemByProperty.value ? itemByProperty.value : ''}
+                                    initialFocus={isFirstProperty ? initialFocus : false}
+                                    blur={!property ? true : false}
+                                    setNextProperty={this.setNextProperty}
+                                    disableAutofocus={this.disableAutofocus}
+                                    enableAutofocus={this.enableAutofocus}
+                                    {...{
+                                        dataId, entity, windowType,
+                                        filterWidget, tabId, rowId,
+                                        subentity, subentityId, viewId,
+                                        onChange, isInputEmpty, property
+                                    }}
+                                />
+                            </div>
+                        )
+                    }
+                })}
+
+                {!readonly && (isInputEmpty ? (
+                    <div
+                        className="input-icon input-icon-lg raw-lookup-wrapper"
+                        onClick={this.openDropdownList}
+                    >
+                        <i className="meta-icon-preview" />
+                    </div>
+                ) : (
+                    <div className="input-icon input-icon-lg raw-lookup-wrapper">
+                        <i className="meta-icon-close-alt" onClick={this.handleClear} />
+                    </div>
+                ))}
             </div>
         )
     }

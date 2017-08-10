@@ -11,7 +11,8 @@ import {
     mapIncluded,
     collapsedMap,
     getItemsByProperty,
-    getZoomIntoWindow
+    getZoomIntoWindow,
+    selectRow
 } from '../../actions/WindowActions';
 
 import {
@@ -59,7 +60,9 @@ class Table extends Component {
     }
 
     componentDidMount(){
-        this.getIndentData(true);
+        const {rows} = this.state;
+        
+        this.getIndentData(true); //selecting first table elem while getting indent data
 
         const {autofocus} = this.props;
 
@@ -69,13 +72,23 @@ class Table extends Component {
     componentDidUpdate(prevProps, prevState) {
         const {
             mainTable, open, rowData, defaultSelected, disconnectFromState,
-            dispatch, type, refreshSelection
+            dispatch, type, refreshSelection, supportIncludedViewOnSelect,
+            showIncludedViewOnSelect, viewId, isModal
         } = this.props;
 
         const {
-            selected
+            selected, rows
         } = this.state;
 
+        if((JSON.stringify(prevState.rows) !==
+            JSON.stringify(rows))){
+                if(isModal){
+                    supportIncludedViewOnSelect &&
+                        this.showSelectedIncludedView([rows[0].id]);
+                    rows[0].id && this.selectOneProduct(rows[0].id);
+                }
+        }
+        
         if(mainTable && open){
             this.table.focus();
         }
@@ -105,6 +118,25 @@ class Table extends Component {
                 selected: defaultSelected
             })
         }
+
+        if(
+            JSON.stringify(prevProps.viewId) !==
+            JSON.stringify(viewId)
+        ){
+            this.setState({
+                selected: []
+            })
+        }
+    }
+
+    showSelectedIncludedView = (selected) => {
+        const {showIncludedViewOnSelect, supportIncludedViewOnSelect} = this.props;
+        const {rows} = this.state;
+        selected.length === 1 && supportIncludedViewOnSelect && rows.map(item=>{
+            if(item.id === selected[0]){
+                showIncludedViewOnSelect(item.supportIncludedViews, item.includedView)
+            }
+        });
     }
 
     getChildContext = () => {
@@ -203,21 +235,32 @@ class Table extends Component {
     }
 
     selectProduct = (id, idFocused, idFocusedDown) => {
-        const {dispatch, type, disconnectFromState} = this.props;
+        const {dispatch, type, disconnectFromState, tabInfo} = this.props;
 
         this.setState(prevState => ({
             selected: prevState.selected.concat([id])
         }), () => {
             const {selected} = this.state;
+
+            if (tabInfo) {
+                dispatch(selectRow(selected));
+            }
+
             !disconnectFromState && dispatch(selectTableItems(selected, type))
             this.triggerFocus(idFocused, idFocusedDown);
         })
     }
 
     selectRangeProduct = (ids) => {
+        const { dispatch, tabInfo } = this.props;
+
         this.setState({
             selected: ids
         });
+
+        if (tabInfo) {
+            dispatch(selectRow(ids));
+        }
     }
 
     selectAll = () => {
@@ -230,25 +273,43 @@ class Table extends Component {
     }
 
     selectOneProduct = (id, idFocused, idFocusedDown, cb) => {
+        const { dispatch, tabInfo } = this.props;
+
         this.setState({
             selected: [id]
         }, () => {
+            if (tabInfo) {
+                dispatch(selectRow([id]));
+            }
+
             this.triggerFocus(idFocused, idFocusedDown);
             cb && cb();
         })
     }
 
     deselectProduct = (id) => {
+        const { dispatch, tabInfo } = this.props;
         const index = this.state.selected.indexOf(id);
+
         this.setState(update(this.state, {
             selected: {$splice: [[index, 1]]}
-        }))
+        }), () => {
+            if (tabInfo) {
+                dispatch(selectRow(this.state.selected));
+            }
+        })
     }
 
     deselectAllProducts = (cb) => {
+        const { dispatch, tabInfo } = this.props;
+
         this.setState({
             selected: []
         }, cb && cb());
+
+        if (tabInfo) {
+            dispatch(selectRow([]));
+        }
     }
 
     triggerFocus = (idFocused, idFocusedDown) => {
@@ -332,7 +393,8 @@ class Table extends Component {
 
                 if(!selectRange) {
                     this.selectOneProduct(
-                        array[currentId + 1], false, idFocused
+                        array[currentId + 1], false, idFocused,
+                        this.showSelectedIncludedView([array[currentId + 1]])
                     );
                 } else {
                     this.selectProduct(
@@ -357,8 +419,10 @@ class Table extends Component {
 
                 if(!selectRange) {
                     this.selectOneProduct(
-                        array[currentId - 1], idFocused, false
+                        array[currentId - 1], idFocused, false,
+                        this.showSelectedIncludedView([array[currentId - 1]])
                     );
+                    
                 } else {
                     this.selectProduct(
                         array[currentId - 1], idFocused, false

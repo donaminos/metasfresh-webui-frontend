@@ -16,6 +16,11 @@ import {
     breadcrumbRequest
 } from '../../actions/MenuActions';
 
+import {
+    closeModal,
+    clearMasterData
+} from '../../actions/WindowActions';
+
 class MenuOverlay extends Component {
     constructor(props){
         super(props);
@@ -30,18 +35,19 @@ class MenuOverlay extends Component {
 
     componentDidMount = () => {
 
-
         const {
             nodeId
         } = this.props;
-        if(nodeId == 0){
+
+        if (nodeId == 0){
             getRootBreadcrumb().then(response => {
                 this.setState({
                     data: response
                 })
             })
-        }else {
-            if (this.props.node) {
+        }
+        else {
+            if (this.props.node && this.props.node.children) {
                 this.setState({
                     data: this.props.node
                 })
@@ -98,7 +104,12 @@ class MenuOverlay extends Component {
     }
 
     handleRedirect = (elementId, isNew, entity) => {
+        const { dispatch } = this.props;
+
         this.handleClickOutside();
+
+        dispatch(closeModal());
+        dispatch(clearMasterData());
 
         this.props.dispatch(
             push(
@@ -160,7 +171,17 @@ class MenuOverlay extends Component {
                 <div>
                     <span
                         className="menu-overlay-header menu-overlay-header-spaced menu-overlay-header-main pointer js-menu-header"
-                        onClick={() => dispatch(push('/'))}
+                        onClick={ (e) => {
+                            if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+
+                            dispatch(closeModal());
+                            dispatch(clearMasterData());
+
+                            dispatch(push('/'))
+                        }}
                         tabIndex={0}
                     >
                         Dashboard
@@ -170,10 +191,21 @@ class MenuOverlay extends Component {
                     <div>
                         <span
                             className="menu-overlay-header menu-overlay-header-spaced menu-overlay-header-main pointer js-menu-header js-browse-item"
-                            onClick={() => dispatch(push('/sitemap'))}
+                            onClick={ (e) => {
+                                if (e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }
+
+                                dispatch(closeModal());
+                                dispatch(clearMasterData());
+
+                                dispatch(push('/sitemap'))
+                            }}
                             tabIndex={0}
                         >
-                            Browse whole tree
+                            {counterpart.translate(
+                                'window.browseTree.caption')}
                         </span>
                     </div>
                 }
