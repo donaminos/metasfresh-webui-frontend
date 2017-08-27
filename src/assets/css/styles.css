@@ -750,16 +750,21 @@ body {
     width: 100%;
     line-height: 22px;
     vertical-align: middle;
+    position: relative;
 }
 
 .sort-menu .sort-ico {
-    height: 15px;
+    position: absolute;
+    right: -12px;
     cursor: pointer;
     color: $brand-font-color;
     opacity: 0;
     display: inline-block;
-    padding: 0 10px;
     vertical-align: middle;
+}
+
+.sort-menu .sort-ico:not(.rotate-90) {
+    top: 3px;
 }
 
 .sort-menu .th-caption {

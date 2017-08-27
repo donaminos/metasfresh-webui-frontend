@@ -54,12 +54,12 @@ class Header extends Component {
     }
 
     componentDidMount() {
-        document.addEventListener('scroll', this.handleScroll);
+        this.initEventListeners();
     }
 
     componentWillUnmount() {
-        document.removeEventListener('scroll', this.handleScroll);
         this.toggleScrollScope(false);
+        this.removeEventListeners();
     }
 
     componentWillUpdate = (nextProps) => {
@@ -78,14 +78,26 @@ class Header extends Component {
             prevProps.me.language !== undefined &&
             JSON.stringify(prevProps.me.language) !==
             JSON.stringify(this.props.me.language)
-        ){
+        ) {
+/*
             dispatch(replace(''));
             dispatch(replace(pathname));
+*/
+            // Need to reload page completely when current locale gets changed
+            window.location.reload(false);
         }
     }
 
     getChildContext = () => {
         return { shortcuts: shortcutManager }
+    }
+
+    initEventListeners = () => {
+        document.addEventListener('scroll', this.handleScroll);
+    }
+
+    removeEventListeners = () => {
+        document.removeEventListener('scroll', this.handleScroll);
     }
 
     handleInboxOpen = (state) => {
