@@ -52,6 +52,7 @@ class List extends Component {
         } = this.props;
 
         this.setState({
+            list: [],
             loading: true
         });
 
@@ -83,7 +84,10 @@ class List extends Component {
                 });
             }
 
-            if (forceFocus && values && (values.length > 0)) {
+            if (
+                forceFocus && values &&
+                (values.length > 0)
+            ) {
                 this.focus();
             }
         });
@@ -101,9 +105,20 @@ class List extends Component {
         }
     }
 
+    closeDropdownList = () => {
+        if (this.rawList) {
+            this.rawList.closeDropdownList();
+        }
+    }
+
     activate = () => {
-        if (this.state.list && this.state.list.length > 1) {
-            this.focus();
+        const { list } = this.state;
+
+        if (list && (list.length > 1)) {
+            if (this.rawList) {
+                this.rawList.openDropdownList();
+                this.rawList.focus();
+            }
         }
     }
 
@@ -121,6 +136,7 @@ class List extends Component {
         if (this.previousValue !== (option && option[optionKey] )) {
              if (lookupList) {
                 const promise = onChange(properties[0].field, option);
+                const mainPropertyField = mainProperty[0].field;
 
                 if (option) {
                     this.setState({
@@ -131,14 +147,26 @@ class List extends Component {
                 }
 
                 if (promise) {
-                    promise.then(()=> {
-                        setNextProperty(mainProperty[0].field);
+                    promise.then( (patchResult)=> {
+                        setNextProperty(mainPropertyField);
+
+                        if (
+                            patchResult && Array.isArray(patchResult) &&
+                            patchResult[0] && patchResult[0].fieldsByName
+                        ) {
+                            let patchFields = patchResult[0].fieldsByName;
+                            if (patchFields.lookupValuesStale === true) {
+                                this.setState({
+                                    list: null
+                                });
+                            }
+                        }
                     })
                 } else {
-                    setNextProperty(mainProperty[0].field);
+                    setNextProperty(mainPropertyField);
                 }
             } else {
-                onChange(option);
+                 onChange(option);
             }
          }
     }

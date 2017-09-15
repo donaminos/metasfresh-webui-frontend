@@ -26,7 +26,7 @@ class RawWidget extends Component {
     }
 
     componentDidMount(){
-        const {autoFocus, textSelected} = this.props
+        const {autoFocus, textSelected} = this.props;
 
         if(this.rawWidget && autoFocus){
             this.rawWidget.focus();
@@ -34,6 +34,12 @@ class RawWidget extends Component {
 
         if(textSelected){
             this.rawWidget.select();
+        }
+    }
+
+    focus = () => {
+        if (this.rawWidget && this.rawWidget.focus) {
+            this.rawWidget.focus();
         }
     }
 
@@ -325,7 +331,6 @@ class RawWidget extends Component {
                         readonly={widgetData[0].readonly || disabled}
                         mandatory={widgetData[0].mandatory}
                         rank={type}
-                        onChange={this.handlePatch}
                         align={gridAlign}
                         isModal={isModal}
                         updated={updated}
@@ -344,6 +349,7 @@ class RawWidget extends Component {
                         listenOnKeys={listenOnKeys}
                         listenOnKeysFalse={listenOnKeysFalse}
                         closeTableField={closeTableField}
+                        onChange={this.handlePatch}
                         onBlurWidget={onBlurWidget}
                     />
                 )
@@ -714,10 +720,15 @@ class RawWidget extends Component {
             return false;
         }
 
+        const widgetFieldsName = fields.map(
+            (field) => 'form-field-' + field.field
+        ).join(' ');
+
         return (
             <div className={
                 'form-group row ' +
-                ((rowId && !isModal) ? 'form-group-table ' : ' ')
+                ((rowId && !isModal) ? 'form-group-table ' : ' ') +
+                widgetFieldsName
             }>
                 {(!noLabel && caption) &&
                     <div

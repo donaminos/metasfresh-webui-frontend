@@ -31,33 +31,15 @@ class LookupList extends Component {
     }
 
     componentWillReceiveProps(nextProps){
-        const {
-            shouldListScrollUpdate, listElementHeight, listVisibleElements
-        } = this.state;
+        if (typeof nextProps.selected === 'number') {
+            const container = this.listScrollWrap;
+            let element = this.items.childNodes[nextProps.selected];
 
-        // no need for updating scroll
-        if (
-            !shouldListScrollUpdate ||
-            typeof nextProps.selected !== 'number' ||
-            nextProps.selected === this.props.selected
-        ){
-            return;
-        }
-
-        const visibleMin = this.listScrollWrap.scrollTop;
-        const visibleMax = this.listScrollWrap.scrollTop +
-            listVisibleElements * listElementHeight;
-
-        //not visible from down
-        if ((nextProps.selected + 1) * listElementHeight > visibleMax){
-            this.listScrollWrap.scrollTop = listElementHeight *
-                (nextProps.selected - listVisibleElements)
-        }
-
-        //not visible from above
-        if (nextProps.selected * listElementHeight < visibleMin){
-            this.listScrollWrap.scrollTop =
-                nextProps.selected * listElementHeight
+            if (container && element && element.scrollIntoView) {
+                if (container.scrollHeight > container.offsetHeight) {
+                    element.scrollIntoView();
+                }
+            }
         }
     }
 
