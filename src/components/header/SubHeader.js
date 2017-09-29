@@ -123,93 +123,125 @@ class Subheader extends Component {
         nodes.map(node => dispatch(updateBreadcrumb(node)));
     }
 
+    handleDownloadSelected = event => {
+        if (this.props.selected.length === 0) {
+            event.preventDefault();
+        }
+    }
+
+    renderDocLink = ({ action, handler, icon, caption, hotkey }) => {
+        const { closeSubheader } = this.props;
+
+        return (
+            <div
+                key={action}
+                className="subheader-item js-subheader-item"
+                tabIndex={0}
+                onClick={() => {
+                    handler()
+                    closeSubheader();
+                }}
+            >
+                <i className={icon} />
+                {caption}
+                <span className="tooltip-inline">
+                    {hotkey}
+                </span>
+            </div>
+        );
+    }
+
+    renderDocLinks = () => {
+        const {
+            dataId,
+            docNo,
+            handleClone,
+            handleDelete,
+            handleEmail,
+            handleLetter,
+            handlePrint,
+            openModal,
+            standardActions,
+            windowType
+        } = this.props;
+
+        if (!dataId) {
+            return false;
+        }
+
+        const docLinks = ([{
+            action: 'advancedEdit',
+            handler: () => {
+                openModal(windowType, 'window', 'Advanced edit', true);
+            },
+            icon: 'meta-icon-edit',
+            caption: counterpart.translate('window.advancedEdit.caption'),
+            hotkey: keymap.GLOBAL_CONTEXT.OPEN_ADVANCED_EDIT
+        }, {
+            action: 'clone',
+            handler: () => {
+                handleClone(windowType, dataId);
+            },
+            icon: 'meta-icon-duplicate',
+            caption: counterpart.translate('window.clone.caption'),
+            hotkey: keymap.GLOBAL_CONTEXT.CLONE_DOCUMENT
+        }, {
+            action: 'email',
+            handler: () => {
+                handleEmail();
+            },
+            icon: 'meta-icon-mail',
+            caption: counterpart.translate('window.email.caption'),
+            hotkey: keymap.GLOBAL_CONTEXT.OPEN_EMAIL
+        }, {
+            action: 'letter',
+            handler: () => {
+                handleLetter();
+            },
+            icon: 'meta-icon-letter',
+            caption: counterpart.translate('window.letter.caption'),
+            hotkey: keymap.GLOBAL_CONTEXT.OPEN_LETTER
+        }, {
+            action: 'print',
+            handler: () => {
+                handlePrint(windowType, dataId, docNo);
+            },
+            icon: 'meta-icon-print',
+            caption: counterpart.translate('window.Print.caption'),
+            hotkey: keymap.GLOBAL_CONTEXT.OPEN_PRINT_RAPORT
+        }, {
+            action: 'delete',
+            handler: () => {
+                handleDelete();
+            },
+            icon: 'meta-icon-delete',
+            caption: counterpart.translate('window.Delete.caption'),
+            hotkey: keymap.GLOBAL_CONTEXT.DELETE_DOCUMENT
+        }]
+            .filter(docLink => standardActions.has(docLink.action))
+            .map(docLink => {
+                return this.renderDocLink(docLink);
+            })
+        );
+
+        return docLinks;
+    }
+
     renderNavColumn = () => {
         const {
-            dataId, windowType, openModal, closeSubheader, handlePrint,
-            handleDelete, docNo, redirect, breadcrumb, siteName, editmode,
-            handleEditModeToggle, handleEmail, handleClone
+            closeSubheader,
+            editmode,
+            handleEditModeToggle,
+            query,
+            redirect,
+            selected,
+            siteName,
+            windowType
         } = this.props;
 
         const {
             elementPath
         } = this.state;
-
-        const docLinks = dataId && [
-            <div
-                key={0}
-                className="subheader-item js-subheader-item"
-                tabIndex={0}
-                onClick={() => {
-                    openModal(windowType, 'window', 'Advanced edit', true);
-                    closeSubheader();
-                }}
-            >
-                <i className="meta-icon-edit" />
-                {counterpart.translate('window.advancedEdit.caption')}
-                <span className="tooltip-inline">
-                    {keymap.GLOBAL_CONTEXT.OPEN_ADVANCED_EDIT}
-                </span>
-            </div>,
-            <div
-                key={10}
-                className="subheader-item js-subheader-item"
-                tabIndex={0}
-                onClick={() => {
-                    handleClone(windowType, dataId);
-                    closeSubheader();
-                }}
-            >
-                <i className="meta-icon-duplicate" />
-                {counterpart.translate('window.clone.caption')}
-                <span className="tooltip-inline">
-                    {keymap.GLOBAL_CONTEXT.CLONE_DOCUMENT}
-                </span>
-            </div>,
-            <div
-                key={20}
-                className="subheader-item js-subheader-item"
-                tabIndex={0}
-                onClick={() => {
-                    handleEmail();
-                    closeSubheader();
-                }}
-            >
-                <i className="meta-icon-mail" />
-                {counterpart.translate('window.email.caption')}
-                <span className="tooltip-inline">
-                    {keymap.GLOBAL_CONTEXT.OPEN_EMAIL}
-                </span>
-            </div>,
-            <div
-                key={30}
-                className="subheader-item js-subheader-item"
-                tabIndex={0}
-                onClick={() => {
-                    handlePrint(windowType, dataId, docNo);
-                    closeSubheader();
-                }}
-            >
-                <i className="meta-icon-print" />
-                {counterpart.translate('window.Print.caption')}
-                <span className="tooltip-inline">
-                    {keymap.GLOBAL_CONTEXT.OPEN_PRINT_RAPORT}
-                </span>
-            </div>,
-            <div
-                key={40}
-                className="subheader-item js-subheader-item"
-                tabIndex={0}
-                onClick={() => {
-                    handleDelete();
-                }}
-            >
-                <i className="meta-icon-delete" />
-                {counterpart.translate('window.Delete.caption')}
-                <span className="tooltip-inline">
-                    {keymap.GLOBAL_CONTEXT.DELETE_DOCUMENT}
-                </span>
-            </div>
-        ]
 
         let currentNode = elementPath;
         if (currentNode && currentNode.children) {
@@ -232,7 +264,7 @@ class Subheader extends Component {
                         transparentBookmarks={!!siteName}
                         updateData={this.handleUpdateBreadcrumb}
                     >
-                        <span 
+                        <span
                             title={
                                 currentNode ? currentNode.caption : siteName
                             }
@@ -242,7 +274,6 @@ class Subheader extends Component {
                     </BookmarkButton>
                 </div>
                 <div className="subheader-break" />
-
                 {windowType && <div
                     className="subheader-item js-subheader-item"
                     tabIndex={0}
@@ -256,7 +287,20 @@ class Subheader extends Component {
                         {keymap.GLOBAL_CONTEXT.NEW_DOCUMENT}
                     </span>
                 </div>}
-                {docLinks}
+                {windowType && query && query.viewId && (
+                    <a
+                        className="subheader-item js-subheader-item"
+                        href={`${config.API_URL}/documentView/${windowType}/${query.viewId}/export/excel?selectedIds=${selected.join(',')}`}
+                        download
+                        onClick={this.handleDownloadSelected}
+                        style={{
+                            opacity: selected.length === 0 ? '0.5' : 1
+                        }}
+                    >
+                        {counterpart.translate('window.downloadSelected.caption')}{selected.length === 0 && ` (${counterpart.translate('window.downloadSelected.nothingSelected')})`}
+                    </a>
+                )}
+                {this.renderDocLinks()}
                 {editmode !== undefined && <div
                     key={editmode}
                     className="subheader-item js-subheader-item"
@@ -321,6 +365,8 @@ Subheader.propTypes = {
     dispatch: PropTypes.func.isRequired
 };
 
-Subheader = connect()(onClickOutside(Subheader));
+Subheader = connect(state => ({
+    standardActions: state.windowHandler.master.standardActions
+}))(onClickOutside(Subheader));
 
 export default Subheader;

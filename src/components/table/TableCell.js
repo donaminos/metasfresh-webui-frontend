@@ -118,8 +118,11 @@ class TableCell extends Component {
             isEdited, widgetData, item, docId, type, rowId, tabId,
             onDoubleClick, onKeyDown, readonly, updatedRow, tabIndex, entity,
             listenOnKeys, listenOnKeysFalse, closeTableField, getSizeClass,
-            handleRightClick
+            handleRightClick, mainTable, onCellChange
         } = this.props;
+
+        let tdValue = (!isEdited) ?
+            this.fieldToString(widgetData[0].value, item.widgetType) : null;
 
         return (
             <td
@@ -141,25 +144,29 @@ class TableCell extends Component {
                     isEdited ?
                         <MasterWidget
                             {...item}
-                            entity={entity}
-                            dataId={docId}
+                            entity={mainTable ? 'window' : entity}
+                            dataId={mainTable ? null : docId}
                             widgetData={widgetData}
                             windowType={type}
+                            isMainTable={mainTable}
                             rowId={rowId}
-                            tabId={tabId}
+                            tabId={mainTable ? null : tabId}
                             noLabel={true}
                             gridAlign={item.gridAlign}
                             handleBackdropLock={this.handleBackdropLock}
                             listenOnKeys={listenOnKeys}
                             listenOnKeysFalse={listenOnKeysFalse}
+                            onChange={mainTable ? onCellChange : null}
                             closeTableField={closeTableField}
+                            ref={(c) => {
+                                this.widget = c && c.getWrappedInstance();
+                            }}
                         />
                     :
-                       <div className="cell-text-wrapper">
-                           {this.fieldToString(
-                               widgetData[0].value, item.widgetType
-                           )}
+                       <div className="cell-text-wrapper" title={tdValue}>
+                           {tdValue}
                        </div>
+
                 }
             </td>
         )
