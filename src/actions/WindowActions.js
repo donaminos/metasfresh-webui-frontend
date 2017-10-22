@@ -25,7 +25,8 @@ import {
 } from './AppActions';
 
 import {
-    setListIncludedView
+    closeListIncludedView,
+    setListIncludedView,
 } from './ListActions';
 
 export function setLatestNewDocument(id) {
@@ -317,7 +318,7 @@ export function createWindow(
                     standardActions: response.data[0].standardActions,
                     validStatus: response.data[0].validStatus,
                     includedTabsInfo: response.data[0].includedTabsInfo,
-                    websocketEndpoint: response.data[0].websocketEndpoint
+                    websocket: response.data[0].websocketEndpoint
                 }));
 
                 if (isModal) {
@@ -764,12 +765,16 @@ export function handleProcessResponse(response, type, id, successCallback) {
                         }
                         break;
                     case 'openIncludedView':
-                        dispatch(setListIncludedView(
-                            action.windowId, action.viewId
-                        ));
+                        dispatch(setListIncludedView({
+                            windowType: action.windowId,
+                            viewId: action.viewId,
+                        }));
                         break;
                     case 'closeIncludedView':
-                        dispatch(setListIncludedView());
+                        dispatch(closeListIncludedView({
+                            windowType: action.windowId,
+                            viewId: action.viewId,
+                        }));
                         break;
                     case 'selectViewRows':
                         dispatch(selectTableItems(

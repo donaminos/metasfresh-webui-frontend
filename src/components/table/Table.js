@@ -72,6 +72,7 @@ class Table extends Component {
             dispatch, mainTable, open, rowData, defaultSelected,
             disconnectFromState, type, refreshSelection,
             supportIncludedViewOnSelect, viewId, isModal, hasIncluded,
+            showIncludedViewOnSelect
         } = this.props;
 
         const {
@@ -127,6 +128,27 @@ class Table extends Component {
             this.setState({
                 selected: []
             });
+
+            this.deselectAllProducts();
+            showIncludedViewOnSelect && showIncludedViewOnSelect({
+                showIncludedView: false,
+                windowType: prevProps.windowType,
+                viewId: prevProps.viewid,
+                forceClose: true,
+            });
+        }
+    }
+
+    componentWillUnmount() {
+        const { showIncludedViewOnSelect, viewId, windowType } = this.props;
+
+        this.deselectAllProducts();
+        if (showIncludedViewOnSelect) {
+            showIncludedViewOnSelect({
+                showIncludedView: false,
+                windowType,
+                viewId,
+            });
         }
     }
 
@@ -137,10 +159,12 @@ class Table extends Component {
         if (selected.length === 1) {
             rows.forEach((item) => {
                 if (item.id === selected[0]) {
-                    showIncludedViewOnSelect(
-                        item.supportIncludedViews,
-                        item.includedView,
-                    );
+                    showIncludedViewOnSelect({
+                        showIncludedView: item.supportIncludedViews,
+                        windowType: item.includedView.windowType ||
+                            item.includedView.windowId,
+                        viewId: item.includedView.viewId,
+                    });
                 }
             });
         }
@@ -340,7 +364,7 @@ class Table extends Component {
     }
 
     handleClickOutside = (event) => {
-        const { showIncludedViewOnSelect } = this.props;
+        const { showIncludedViewOnSelect, viewId, windowType } = this.props;
         if(
             event.target.parentNode !== document &&
             (event.target.parentNode &&
@@ -359,7 +383,13 @@ class Table extends Component {
             }
 
             this.deselectAllProducts();
-            showIncludedViewOnSelect && showIncludedViewOnSelect(false);
+            if (showIncludedViewOnSelect) {
+                showIncludedViewOnSelect({
+                    showIncludedView: false,
+                    windowType,
+                    viewId,
+                });
+            }
         }
     }
 
@@ -864,11 +894,14 @@ class Table extends Component {
                         }
                         onMouseDown={(e) => {
                             this.handleClick(e, item[keyProperty]);
-                            supportIncludedViewOnSelect &&
-                                showIncludedViewOnSelect(
-                                    item.supportIncludedViews,
-                                    item.includedView
-                                )
+                            if (supportIncludedViewOnSelect) {
+                                showIncludedViewOnSelect({
+                                    showIncludedView: item.supportIncludedViews,
+                                    windowType: item.includedView.windowType ||
+                                        item.includedView.windowId,
+                                    viewId: item.includedView.viewId,
+                                });
+                            }
                         }}
                         handleRightClick={(e, fieldName, supportZoomInto,
                                            supportFieldEdit) =>
@@ -939,7 +972,7 @@ class Table extends Component {
         } = this.props;
 
         const {
-            contextMenu, selected, promptOpen, isBatchEntry
+            contextMenu, selected, promptOpen, isBatchEntry, rows
         } = this.state;
 
         return (
@@ -1042,13 +1075,14 @@ class Table extends Component {
                         this.props.children
                     }
                 </div>
-
                 {page && pageLength &&
                     <div>
                         <TablePagination
-                            {...{handleChangePage, pageLength, size,
+                            {...{handleChangePage, size,
                                 selected, page, orderBy, queryLimitHit,
                                 disablePaginationShortcuts}}
+                            pageLength={pageLength}
+                            rowLength={rows ? rows.length : 0}
                             handleSelectAll={this.selectAll}
                             handleSelectRange={this.selectRangeProduct}
                             deselect={this.deselectAllProducts}

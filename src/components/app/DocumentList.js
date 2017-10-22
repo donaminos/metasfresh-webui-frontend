@@ -29,6 +29,7 @@ import {
 } from '../../actions/WindowActions';
 
 import {
+    closeListIncludedView,
     setSorting,
     setPagination,
     setListId,
@@ -189,7 +190,7 @@ class DocumentList extends Component {
             (layout && layout.supportIncludedView) &&
             !_.isEqual(this.props.selected, selected)
         ) {
-            dispatch(setListIncludedView());
+            dispatch(closeListIncludedView({ windowType, viewId }));
         }
     }
 
@@ -498,19 +499,25 @@ class DocumentList extends Component {
         }
     }
 
-    showIncludedViewOnSelect = (showIncludedView, data) => {
-        const {
-            dispatch
-        } = this.props;
+    showIncludedViewOnSelect = ({
+        showIncludedView, windowType, viewId, forceClose,
+    } = {}) => {
+        const { dispatch } = this.props;
 
         this.setState({
-            isShowIncluded: showIncludedView ? true : false,
-            hasShowIncluded: showIncludedView ? true : false
-        }, ()=> {
+            isShowIncluded: !!showIncludedView,
+            hasShowIncluded: !!showIncludedView,
+        }, () => {
             if (showIncludedView) {
-                dispatch(setListIncludedView(data.windowId, data.viewId));
+                dispatch(setListIncludedView({ windowType, viewId }));
             }
         });
+
+        // can't use setState callback because component might be unmounted and
+        // callback is never called
+        if (!showIncludedView) {
+            dispatch(closeListIncludedView({ windowType, viewId, forceClose }));
+        }
     }
 
     render() {
@@ -658,7 +665,7 @@ class DocumentList extends Component {
                                 {...{isIncluded, disconnectFromState, autofocus,
                                     open, page, closeOverlays, inBackground,
                                     disablePaginationShortcuts, isModal,
-                                    hasIncluded, viewId
+                                    hasIncluded, viewId, windowType,
                                 }}
                             >
                                 {layout.supportAttributes && !isIncluded &&
