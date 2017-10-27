@@ -40,8 +40,16 @@ const initialState = {
     indicator: 'saved',
     latestNewDocument: null,
     viewId: null,
-    selected: [],
-    selectedWindowType: null
+    selections: {},
+};
+
+export const NO_SELECTION = [];
+export const getSelection = ({ state, windowType, viewId }) => {
+    const windowTypeSelections = state.windowHandler.selections[windowType];
+
+    return (
+        windowTypeSelections && windowTypeSelections[viewId]
+    ) || NO_SELECTION;
 };
 
 export default function windowHandler(state = initialState, action) {
@@ -78,26 +86,17 @@ export default function windowHandler(state = initialState, action) {
                 })
             });
 
+        case types.CLOSE_PROCESS_MODAL:
+            if (state.modal.modalType === 'process') {
+                return Object.assign({}, state, {
+                    modal: Object.assign({}, state.modal, initialState.modal),
+                });
+            }
+            return state;
+
         case types.CLOSE_MODAL:
             return Object.assign({}, state, {
-                modal: Object.assign({}, state.modal, {
-                    visible: false,
-                    tabId: null,
-                    rowId: null,
-                    viewId: null,
-                    viewDocumentIds: null,
-                    layout: {},
-                    data: [],
-                    rowData: {},
-                    isAdvanced: false,
-                    title: '',
-                    type: '',
-                    modalType: '',
-                    saveStatus: {},
-                    validStatus: {},
-                    includedTabsInfo: {},
-                    triggerField: null
-                })
+                modal: Object.assign({}, state.modal, initialState.modal),
             });
 
         // SCOPED ACTIONS
@@ -189,11 +188,6 @@ export default function windowHandler(state = initialState, action) {
                         }
                     }
                 }
-            });
-
-        case types.SELECT_ROW:
-            return Object.assign({}, state, {
-                selected: action.selected
             });
 
         case types.UPDATE_DATA_FIELD_PROPERTY:
@@ -356,11 +350,23 @@ export default function windowHandler(state = initialState, action) {
 
         // END OF INDICATOR ACTIONS
 
-        case types.SELECT_TABLE_ITEMS:
-            return Object.assign({}, state, {
-                selected: action.ids,
-                selectedWindowType: action.windowType
-            });
+        case types.SELECT_TABLE_ITEMS: {
+            const { windowType, viewId, ids } = action.payload;
+
+            return {
+                ...state,
+
+                selections: {
+                    ...state.selections,
+
+                    [windowType]: {
+                        ...state.selections[windowType],
+
+                        [viewId]: ids,
+                    },
+                },
+            };
+        }
 
         // LATEST NEW DOCUMENT CACHE
         case types.SET_LATEST_NEW_DOCUMENT:

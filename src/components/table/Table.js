@@ -13,7 +13,6 @@ import {
     mapIncluded,
     collapsedMap,
     getZoomIntoWindow,
-    selectRow
 } from '../../actions/WindowActions';
 import { deleteRequest } from '../../actions/GenericActions';
 import keymap from '../../keymap.js';
@@ -71,8 +70,7 @@ class Table extends Component {
         const {
             dispatch, mainTable, open, rowData, defaultSelected,
             disconnectFromState, type, refreshSelection,
-            supportIncludedViewOnSelect, viewId, isModal, hasIncluded,
-            showIncludedViewOnSelect
+            openIncludedViewOnSelect, viewId, isModal, hasIncluded,
         } = this.props;
 
         const {
@@ -87,7 +85,7 @@ class Table extends Component {
                     let firstRow = rows[0];
 
                     if (firstRow) {
-                        if (supportIncludedViewOnSelect) {
+                        if (openIncludedViewOnSelect) {
                             this.showSelectedIncludedView([firstRow.id]);
                         }
 
@@ -104,17 +102,6 @@ class Table extends Component {
         }
 
         if (
-            !disconnectFromState &&
-            !_.isEqual(prevState.selected, selected)
-        ) {
-            dispatch(selectTableItems(selected, type));
-        }
-
-        if (!_.isEqual(prevProps.rowData, rowData)) {
-            this.getIndentData();
-        }
-
-        if (
             !_.isEqual(prevProps.defaultSelected, defaultSelected) ||
             (prevProps.refreshSelection !== refreshSelection) &&
             refreshSelection
@@ -122,28 +109,33 @@ class Table extends Component {
             this.setState({
                 selected: defaultSelected
             });
+        } else if (
+            !disconnectFromState &&
+            !_.isEqual(prevState.selected, selected)
+        ) {
+            dispatch(selectTableItems({
+                windowType: type,
+                viewId,
+                ids: selected,
+            }));
         }
 
-        if (prevProps.viewId !== viewId) {
-            this.setState({
-                selected: []
-            });
+        if (!_.isEqual(prevProps.rowData, rowData)) {
+            this.getIndentData();
+        }
 
-            this.deselectAllProducts();
-            showIncludedViewOnSelect && showIncludedViewOnSelect({
-                showIncludedView: false,
-                windowType: prevProps.windowType,
-                viewId: prevProps.viewid,
-                forceClose: true,
-            });
+        if (prevProps.viewId !== viewId && defaultSelected.length === 0) {
+            this.getIndentData(true);
         }
     }
 
     componentWillUnmount() {
-        const { showIncludedViewOnSelect, viewId, windowType } = this.props;
+        const {
+            showIncludedViewOnSelect, viewId, windowType, isIncluded
+        } = this.props;
 
         this.deselectAllProducts();
-        if (showIncludedViewOnSelect) {
+        if (showIncludedViewOnSelect && !isIncluded) {
             showIncludedViewOnSelect({
                 showIncludedView: false,
                 windowType,
@@ -161,9 +153,15 @@ class Table extends Component {
                 if (item.id === selected[0]) {
                     showIncludedViewOnSelect({
                         showIncludedView: item.supportIncludedViews,
-                        windowType: item.includedView.windowType ||
-                            item.includedView.windowId,
-                        viewId: item.includedView.viewId,
+
+                        windowType: item.supportIncludedViews ? (
+                            item.includedView.windowType ||
+                            item.includedView.windowId
+                        ) : null,
+
+                        viewId: item.supportIncludedViews ? (
+                            item.includedView.viewId
+                        ) : '',
                     });
                 }
             });
@@ -197,8 +195,10 @@ class Table extends Component {
             }, () => {
                 const {rows} = this.state;
 
-                if(selectFirst){
-                    this.selectOneProduct(rows[0].id);
+                const firstRow = rows[0];
+
+                if (selectFirst && firstRow) {
+                    this.selectOneProduct(firstRow.id);
                     document.getElementsByClassName('js-table')[0].focus();
                 }
 
@@ -268,7 +268,13 @@ class Table extends Component {
     }
 
     selectProduct = (id, idFocused, idFocusedDown) => {
-        const {dispatch, type, disconnectFromState, tabInfo} = this.props;
+        const {
+            dispatch,
+            type,
+            disconnectFromState,
+            tabInfo,
+            viewId,
+        } = this.props;
 
         this.setState(prevState => ({
             selected: prevState.selected.concat([id])
@@ -276,23 +282,38 @@ class Table extends Component {
             const {selected} = this.state;
 
             if (tabInfo) {
-                dispatch(selectRow(selected));
+                dispatch(selectTableItems({
+                    windowType: type,
+                    viewId,
+                    ids: selected,
+                }));
             }
 
-            !disconnectFromState && dispatch(selectTableItems(selected, type))
+            if (!disconnectFromState) {
+                dispatch(selectTableItems({
+                    windowType: type,
+                    viewId,
+                    ids: selected,
+                }));
+            }
+
             this.triggerFocus(idFocused, idFocusedDown);
         })
     }
 
     selectRangeProduct = (ids) => {
-        const { dispatch, tabInfo } = this.props;
+        const { dispatch, tabInfo, type, viewId } = this.props;
 
         this.setState({
             selected: ids
         });
 
         if (tabInfo) {
-            dispatch(selectRow(ids));
+            dispatch(selectTableItems({
+                windowType: type,
+                viewId,
+                ids,
+            }));
         }
     }
 
@@ -306,13 +327,17 @@ class Table extends Component {
     }
 
     selectOneProduct = (id, idFocused, idFocusedDown, cb) => {
-        const { dispatch, tabInfo } = this.props;
+        const { dispatch, tabInfo, type, viewId } = this.props;
 
         this.setState({
             selected: [id]
         }, () => {
             if (tabInfo) {
-                dispatch(selectRow([id]));
+                dispatch(selectTableItems({
+                    windowType: type,
+                    viewId,
+                    ids: [id],
+                }));
             }
 
             this.triggerFocus(idFocused, idFocusedDown);
@@ -321,27 +346,35 @@ class Table extends Component {
     }
 
     deselectProduct = (id) => {
-        const { dispatch, tabInfo } = this.props;
+        const { dispatch, tabInfo, type, viewId } = this.props;
         const index = this.state.selected.indexOf(id);
 
         this.setState(update(this.state, {
             selected: {$splice: [[index, 1]]}
         }), () => {
             if (tabInfo) {
-                dispatch(selectRow(this.state.selected));
+                dispatch(selectTableItems({
+                    windowType: type,
+                    viewId,
+                    ids: this.state.selected,
+                }));
             }
         })
     }
 
     deselectAllProducts = (cb) => {
-        const { dispatch, tabInfo } = this.props;
+        const { dispatch, tabInfo, type, viewId } = this.props;
 
         this.setState({
             selected: []
         }, cb && cb());
 
         if (tabInfo) {
-            dispatch(selectRow([]));
+            dispatch(selectTableItems({
+                windowType: type,
+                viewId,
+                ids: [],
+            }));
         }
     }
 
@@ -364,19 +397,21 @@ class Table extends Component {
     }
 
     handleClickOutside = (event) => {
-        const { showIncludedViewOnSelect, viewId, windowType } = this.props;
-        if(
-            event.target.parentNode !== document &&
-            (event.target.parentNode &&
-            !event.target.parentNode.className.includes('notification'))
+        const {
+            showIncludedViewOnSelect, viewId, windowType, inBackground,
+        } = this.props;
+
+        if (event.target.parentNode !== document && event.target.parentNode &&
+            !event.target.parentNode.className.includes('notification') &&
+            !inBackground
         ) {
             const item = event.path;
-            if(item) {
-                for(let i = 0; i < item.length; i++){
-                    if(
-                        item[i].classList &&
+
+            if (item) {
+                for (let i = 0; i < item.length; i++) {
+                    if (item[i].classList &&
                         item[i].classList.contains('js-not-unselect')
-                    ){
+                    ) {
                         return;
                     }
                 }
@@ -856,7 +891,7 @@ class Table extends Component {
         const {
             tabid, cols, type, docId, readonly, keyProperty, onDoubleClick,
             mainTable, newRow, tabIndex, entity, indentSupported, collapsible,
-            showIncludedViewOnSelect, supportIncludedViewOnSelect
+            showIncludedViewOnSelect, openIncludedViewOnSelect
         } = this.props;
 
         const {
@@ -894,12 +929,18 @@ class Table extends Component {
                         }
                         onMouseDown={(e) => {
                             this.handleClick(e, item[keyProperty]);
-                            if (supportIncludedViewOnSelect) {
+                            if (openIncludedViewOnSelect) {
                                 showIncludedViewOnSelect({
                                     showIncludedView: item.supportIncludedViews,
-                                    windowType: item.includedView.windowType ||
-                                        item.includedView.windowId,
-                                    viewId: item.includedView.viewId,
+
+                                    windowType: item.supportIncludedViews ? (
+                                        item.includedView.windowType ||
+                                        item.includedView.windowId
+                                    ) : null,
+
+                                    viewId: item.supportIncludedViews ? (
+                                        item.includedView.viewId
+                                    ) : '',
                                 });
                             }
                         }}
@@ -968,7 +1009,7 @@ class Table extends Component {
             pageLength, page, mainTable, updateDocList, sort, orderBy,
             toggleFullScreen, fullScreen, tabIndex, indentSupported, isModal,
             queryLimitHit, supportQuickInput, tabInfo,
-            disablePaginationShortcuts, hasIncluded
+            disablePaginationShortcuts, hasIncluded, blurOnIncludedView
         } = this.props;
 
         const {
@@ -1043,7 +1084,8 @@ class Table extends Component {
                                 'table table-bordered-vertically ' +
                                 'table-striped js-table ' +
                                 (readonly ? 'table-read-only ' : '') +
-                                (hasIncluded ? 'table-fade-out': '')
+                                ((hasIncluded && blurOnIncludedView) ?
+                                    'table-fade-out': '')
                             }
                             onKeyDown={this.handleKeyDown}
                             tabIndex={tabIndex}
